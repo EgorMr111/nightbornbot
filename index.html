@@ -134,7 +134,7 @@
             color: #d1e8ff;
         }
 
-        .task-list, .sponsors-list, .ref-list {
+        .task-list, .sponsors-list {
             display: flex;
             flex-direction: column;
             gap: 12px;
@@ -316,7 +316,6 @@
         <div class="balance-amount" id="balance">0.00 ₴</div>
     </div>
 
-    <!-- РОЗДІЛ 1: ЗАВДАННЯ -->
     <div id="tab-tasks" class="tab-content active">
         <div class="section-title">⚡ Активні завдання</div>
         <div class="task-list">
@@ -346,7 +345,6 @@
         </div>
     </div>
 
-    <!-- РОЗДІЛ 2: РЕФЕРАЛИ (ДРУЗІ) -->
     <div id="tab-refs" class="tab-content">
         <div class="section-title">👥 Запрошуй друзів</div>
         <div class="card-box">
@@ -357,7 +355,6 @@
         </div>
     </div>
 
-    <!-- РОЗДІЛ 3: СПОНСОРИ -->
     <div id="tab-sponsors" class="tab-content">
         <div class="section-title">💼 Наші партнери</div>
         <div class="sponsors-list">
@@ -369,12 +366,11 @@
         </div>
     </div>
 
-    <!-- РОЗДІЛ 4: ПРОФІЛЬ ТА ВИПЛАТА -->
     <div id="tab-profile" class="tab-content">
         <div class="section-title">👤 Виведення коштів</div>
         <div class="card-box">
             <h4>Замовити виплату 💳</h4>
-            <p>Мінімум для виведення: <span style="color: #fff;">50.00 ₴</span></p>
+            <p>Мінімум для виведення: <span style="color: #fff;">1.00 ₴</span></p>
             <input type="text" id="cardNumber" class="input-field" placeholder="Номер картки (4441 ...)" style="margin-top: 6px;">
             <button class="btn" onclick="requestWithdrawal()" style="margin-top: 8px; width: 100%;">Замовити виплату</button>
         </div>
@@ -382,7 +378,6 @@
 
 </div>
 
-<!-- НИЖНЯ ПАНЕЛЬ НАВІГАЦІЇ -->
 <nav class="nav-bar">
     <button class="nav-item active" onclick="switchTab('tasks', this)">
         <span>⚡</span>Завдання
@@ -465,8 +460,10 @@
 
     function requestWithdrawal() {
         let card = document.getElementById('cardNumber').value.trim();
-        if (currentBalance < 50) {
-            alert('❌ Недостатньо коштів! Мінімальна сума для виведення — 50 ₴.');
+        
+        // Змінено перевірку мінімальної суми на 1 ₴
+        if (currentBalance < 1) {
+            alert('❌ Недостатньо коштів! Мінімальна сума для виведення — 1 ₴.');
             return;
         }
         if (card.length < 16) {
@@ -481,7 +478,7 @@
         };
 
         if (tg.sendData) {
-            tg.sendData(JSON.stringify(data));
+            tg.sendData(JSON.stringify(data)); // Відправляє дані боту @DarkkkNc
         } else {
             alert('💳 Заявку на виплату прийнято! (Тестовий режим)');
         }
