@@ -317,7 +317,7 @@
     let displayedBalance = 0;
     const tgUser = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user : null;
     const userId = tgUser ? tgUser.id : null;
-    const BOT_USERNAME = "your_bot_username"; // заміни на реальний username бота (без @)
+    const BOT_USERNAME = "nightbornbot"; // Твій правильний юзернейм бота
     const CHANNEL_URL = "https://t.me/NightCapitallNc";
     const MIN_WITHDRAW = 1;
 
@@ -412,8 +412,6 @@
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
     }
 
-    // Завдання, пов'язані з каналом: відкриваємо канал, а винагороду нараховуємо
-    // одразу після повернення в Mini App (без серверної перевірки підписки).
     function openChannelTask(btnEl, reward, event) {
         if (btnEl.classList.contains("btn-done")) return;
         pressGlow(btnEl, event);
@@ -424,7 +422,6 @@
             window.open(CHANNEL_URL, "_blank");
         }
 
-        // Невелика затримка, щоб нарахування виглядало як реакція на повернення користувача
         setTimeout(() => {
             completeTask(btnEl, reward, null);
         }, 600);
@@ -476,7 +473,7 @@
         return /^\d{13,19}$/.test(digits);
     }
 
-    // ---- Withdraw ----
+    // ---- Withdraw (Оновлено для роботи з телефонів через deep-посилання) ----
     function requestWithdraw(event) {
         const btn = document.getElementById("withdrawBtn");
         if (event) pressGlow(btn, event);
@@ -498,11 +495,21 @@
             return;
         }
 
-        const payload = { action: "withdraw", amount: amount, card: cardRaw };
+        // Формуємо текст заявки для бота
+        const messageText = `⚡️ ВИНАГОРОДА_ВИПЛАТА\nСума: ${amount} ₴\nКартка: ${cardRaw}`;
+        const encodedText = encodeURIComponent(messageText);
+        const deepLink = `https://t.me/${BOT_USERNAME}?start=${encodedText}`;
+
         showToast("Надсилаємо заявку...", "success");
 
-        // sendData() закриває Mini App одразу після виклику
-        tg.sendData(JSON.stringify(payload));
+        // Відкриваємо чат з ботом через deep-посилання для відправки заявки з телефону
+        setTimeout(() => {
+            if (tg.openTelegramLink) {
+                tg.openTelegramLink(deepLink);
+            } else {
+                window.open(deepLink, "_blank");
+            }
+        }, 600);
     }
 
     // ---- Init ----
