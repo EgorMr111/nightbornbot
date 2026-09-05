@@ -3,62 +3,50 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>Nightborn</title>
+  <title>Night Royale 💸</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
-      --void: #01010a;
-      --navy: #050b22;
-      --indigo: #12082a;
-      --lunar: #2a0f4a;
-      --glass: rgba(18, 16, 48, 0.42);
-      --glass-2: rgba(10, 14, 40, 0.68);
       --cyan: #7df0ff;
       --cyan-2: #22d3ee;
       --purple: #c4b5fd;
       --violet: #7c3aed;
       --text: #f7f8ff;
-      --muted: rgba(226, 232, 255, 0.68);
+      --muted: rgba(226, 232, 255, 0.78);
       --ok: #86efac;
       --danger: #fda4af;
+      --glass: rgba(8, 10, 28, 0.55);
+      --glass-2: rgba(6, 8, 22, 0.72);
       --nav-h: 78px;
       --safe-b: env(safe-area-inset-bottom, 0px);
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { margin: 0; width: 100%; max-width: 100%; overflow-x: hidden; }
+
     body {
       font-family: "SF Pro Display", "Segoe UI", system-ui, sans-serif;
       color: var(--text);
       min-height: 100dvh;
-      background:
-        radial-gradient(900px 520px at 108% -8%, rgba(124, 58, 237, 0.42), transparent 58%),
-        radial-gradient(720px 480px at -18% 12%, rgba(34, 211, 238, 0.18), transparent 52%),
-        radial-gradient(640px 420px at 50% 118%, rgba(88, 28, 135, 0.45), transparent 60%),
-        linear-gradient(168deg, var(--void) 0%, var(--navy) 38%, var(--indigo) 72%, var(--lunar) 100%);
+      background-color: #03040c;
+      background-image:
+        linear-gradient(180deg, rgba(2, 4, 16, 0.78) 0%, rgba(8, 6, 24, 0.72) 42%, rgba(4, 8, 22, 0.82) 100%),
+        url("bg.jpg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
     }
-    body::before, body::after {
+
+    body::before {
       content: "";
       position: fixed;
       inset: 0;
       pointer-events: none;
-    }
-    body::before {
-      background-image:
-        radial-gradient(1.2px 1.2px at 14% 16%, rgba(255,255,255,.7) 50%, transparent 51%),
-        radial-gradient(1px 1px at 78% 10%, rgba(125,240,255,.7) 50%, transparent 51%),
-        radial-gradient(1.6px 1.6px at 92% 38%, rgba(196,181,253,.65) 50%, transparent 51%),
-        radial-gradient(1px 1px at 32% 58%, rgba(255,255,255,.4) 50%, transparent 51%),
-        radial-gradient(1px 1px at 62% 82%, rgba(125,240,255,.45) 50%, transparent 51%),
-        radial-gradient(1.4px 1.4px at 8% 86%, rgba(196,181,253,.5) 50%, transparent 51%);
-      animation: drift 22s linear infinite;
-    }
-    body::after {
-      background: radial-gradient(circle at 70% 18%, rgba(125,240,255,.08), transparent 36%);
-    }
-    @keyframes drift {
-      from { transform: translateY(0); }
-      to { transform: translateY(-18px); }
+      z-index: 0;
+      background:
+        radial-gradient(700px 420px at 88% -8%, rgba(124, 58, 237, 0.28), transparent 58%),
+        radial-gradient(560px 380px at -10% 18%, rgba(34, 211, 238, 0.16), transparent 55%);
     }
 
     .app {
@@ -82,45 +70,65 @@
       padding: 7px 11px 7px 7px;
       border-radius: 999px;
       background: var(--glass-2);
-      border: 1px solid rgba(125, 240, 255, 0.38);
+      border: 1px solid rgba(125, 240, 255, 0.4);
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
       box-shadow: 0 0 22px rgba(125, 240, 255, 0.18);
     }
     .avatar {
-      width: 34px; height: 34px; border-radius: 50%;
-      display: grid; place-items: center;
-      font-weight: 760; font-size: 14px; color: #071018;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 760;
+      font-size: 14px;
+      color: #071018;
       background: linear-gradient(145deg, var(--cyan), var(--violet));
       box-shadow: 0 0 12px rgba(125, 240, 255, 0.45);
       flex-shrink: 0;
     }
     .badge-meta { min-width: 0; }
     .badge-name {
-      font-size: 12px; font-weight: 680; line-height: 1.15;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      font-size: 12px;
+      font-weight: 680;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .badge-id {
-      font-size: 10px; color: var(--muted);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .hero { padding-right: 118px; margin-bottom: 16px; }
     .kicker {
       margin: 0 0 6px;
-      font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
       color: var(--purple);
     }
-    h1 { margin: 0; font-size: 26px; font-weight: 760; letter-spacing: -.03em; }
+    h1 {
+      margin: 0;
+      font-size: 26px;
+      font-weight: 760;
+      letter-spacing: -.03em;
+      text-shadow: 0 0 22px rgba(125, 240, 255, 0.28);
+    }
 
     .glass {
       background: var(--glass);
-      border: 1px solid rgba(125, 240, 255, 0.28);
+      border: 1px solid rgba(125, 240, 255, 0.32);
       backdrop-filter: blur(22px);
       -webkit-backdrop-filter: blur(22px);
       box-shadow:
-        0 0 28px rgba(124, 58, 237, 0.16),
-        inset 0 1px 0 rgba(255,255,255,.1);
+        0 0 28px rgba(124, 58, 237, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, .12);
     }
 
     .balance-card {
@@ -131,25 +139,40 @@
     }
     .balance-card.pulse { animation: pulseGlow .95s ease; }
     @keyframes pulseGlow {
-      0% { box-shadow: 0 0 0 rgba(125,240,255,0); }
-      40% { box-shadow: 0 0 46px rgba(125,240,255,.5); }
-      100% { box-shadow: 0 0 28px rgba(124, 58, 237, 0.16); }
+      0% { box-shadow: 0 0 0 rgba(125, 240, 255, 0); }
+      40% { box-shadow: 0 0 46px rgba(125, 240, 255, .5); }
+      100% { box-shadow: 0 0 28px rgba(124, 58, 237, 0.18); }
     }
     .balance-label {
-      margin: 0; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+      margin: 0;
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--muted);
     }
     .balance-row { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; }
     .balance-value {
-      font-size: 40px; font-weight: 780; letter-spacing: -.04em; line-height: 1;
+      font-size: 40px;
+      font-weight: 780;
+      letter-spacing: -.04em;
+      line-height: 1;
       background: linear-gradient(92deg, #fff 10%, var(--cyan) 55%, var(--purple) 100%);
-      -webkit-background-clip: text; background-clip: text; color: transparent;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
     .balance-unit { color: var(--cyan); font-weight: 700; font-size: 18px; }
     .balance-hint { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
     .admin-chip {
-      display: none; margin-top: 12px; width: fit-content;
-      padding: 5px 10px; border-radius: 999px; font-size: 11px; color: var(--purple);
-      border: 1px solid rgba(196,181,253,.45); background: rgba(124, 58, 237, .16);
+      display: none;
+      margin-top: 12px;
+      width: fit-content;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      color: var(--purple);
+      border: 1px solid rgba(196, 181, 253, .45);
+      background: rgba(124, 58, 237, .16);
     }
     .admin-chip.show { display: inline-flex; }
 
@@ -167,16 +190,26 @@
     .task-title { margin: 0; font-size: 15px; font-weight: 700; }
     .task-desc { margin: 6px 0 0; font-size: 13px; color: var(--muted); line-height: 1.4; }
     .reward {
-      flex-shrink: 0; font-size: 12px; font-weight: 760; color: var(--cyan);
-      padding: 4px 8px; border-radius: 999px;
-      border: 1px solid rgba(125,240,255,.4);
-      background: rgba(34,211,238,.1);
-      box-shadow: 0 0 12px rgba(125,240,255,.15);
+      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: 760;
+      color: var(--cyan);
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(125, 240, 255, .4);
+      background: rgba(34, 211, 238, .12);
+      box-shadow: 0 0 12px rgba(125, 240, 255, .15);
     }
 
     .btn {
-      width: 100%; margin-top: 14px; border: 0; border-radius: 14px;
-      padding: 12px 14px; font-size: 14px; font-weight: 760; color: #071018;
+      width: 100%;
+      margin-top: 14px;
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-size: 14px;
+      font-weight: 760;
+      color: #071018;
       background: linear-gradient(135deg, var(--cyan) 0%, #a78bfa 100%);
       box-shadow: 0 0 22px rgba(125, 240, 255, .32);
       cursor: pointer;
@@ -185,14 +218,24 @@
     .btn:hover { filter: brightness(1.06); box-shadow: 0 0 28px rgba(125, 240, 255, .48); }
     .btn:active { transform: scale(.97); }
     .btn:disabled {
-      cursor: default; transform: none; filter: none;
+      cursor: default;
+      transform: none;
+      filter: none;
       color: var(--ok);
       background: rgba(134, 239, 172, .12);
       border: 1px solid rgba(134, 239, 172, .3);
       box-shadow: none;
     }
+    .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+    .btn-row .btn { margin-top: 0; }
+    .btn.ghost {
+      color: var(--text);
+      background: rgba(255, 255, 255, .08);
+      border: 1px solid rgba(125, 240, 255, .28);
+      box-shadow: none;
+    }
 
-    .ref-link { margin: 0; word-break: break-all; font-size: 13px; color: var(--cyan); line-height: 1.45; }
+    .ref-link { margin: 10px 0 0; word-break: break-all; font-size: 13px; color: var(--cyan); line-height: 1.45; }
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .stat { padding: 14px; text-align: center; }
     .stat b { display: block; font-size: 22px; color: var(--cyan); }
@@ -201,48 +244,69 @@
     label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; }
     .field { margin-bottom: 12px; }
     input {
-      width: 100%; border: 1px solid rgba(125,240,255,.22);
-      background: rgba(2, 6, 20, .5); color: var(--text);
-      border-radius: 14px; padding: 13px 14px; font-size: 16px; outline: none;
+      width: 100%;
+      border: 1px solid rgba(125, 240, 255, .22);
+      background: rgba(2, 6, 20, .55);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 13px 14px;
+      font-size: 16px;
+      outline: none;
       transition: border-color .18s ease, box-shadow .18s ease;
     }
     input:focus {
       border-color: var(--cyan);
-      box-shadow: 0 0 0 3px rgba(34,211,238,.14), 0 0 18px rgba(125,240,255,.18);
+      box-shadow: 0 0 0 3px rgba(34, 211, 238, .14), 0 0 18px rgba(125, 240, 255, .18);
     }
     .error { min-height: 18px; margin: 0 0 8px; font-size: 12px; color: var(--danger); }
 
     .nav {
-      position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 30;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
       padding: 10px 12px calc(10px + var(--safe-b));
-      background: rgba(4, 6, 20, .78);
+      background: rgba(4, 6, 20, .82);
       border-top: 1px solid rgba(125, 240, 255, 0.18);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
     }
     .nav-btn {
-      border: 0; background: transparent; color: var(--muted);
-      padding: 10px 6px; border-radius: 14px;
-      font-size: 12px; font-weight: 680; cursor: pointer;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 10px 6px;
+      border-radius: 14px;
+      font-size: 12px;
+      font-weight: 680;
+      cursor: pointer;
       transition: background .2s ease, color .2s ease, box-shadow .2s ease;
     }
     .nav-btn.active {
       color: var(--text);
-      background: linear-gradient(180deg, rgba(34,211,238,.18), rgba(124,58,237,.16));
-      box-shadow: 0 0 16px rgba(125,240,255,.16);
+      background: linear-gradient(180deg, rgba(34, 211, 238, .18), rgba(124, 58, 237, .16));
+      box-shadow: 0 0 16px rgba(125, 240, 255, .16);
     }
 
     .toast {
-      position: fixed; left: 50%;
+      position: fixed;
+      left: 50%;
       bottom: calc(var(--nav-h) + var(--safe-b) + 12px);
       transform: translateX(-50%) translateY(16px);
-      opacity: 0; pointer-events: none; z-index: 50;
-      padding: 10px 14px; border-radius: 999px;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 50;
+      padding: 10px 14px;
+      border-radius: 999px;
       background: var(--glass-2);
-      border: 1px solid rgba(125,240,255,.35);
+      border: 1px solid rgba(125, 240, 255, .35);
       backdrop-filter: blur(16px);
-      font-size: 13px; white-space: nowrap;
+      font-size: 13px;
+      white-space: nowrap;
       transition: .28s ease;
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -252,7 +316,7 @@
   <div class="badge" id="profileBadge">
     <div class="avatar" id="avatar">N</div>
     <div class="badge-meta">
-      <div class="badge-name" id="userName">Nightborn</div>
+      <div class="badge-name" id="userName">Night Royale 💸</div>
       <div class="badge-id" id="userId">ID: —</div>
     </div>
   </div>
@@ -260,16 +324,16 @@
   <main class="app">
     <header class="hero">
       <p class="kicker">Moonlight Glow</p>
-      <h1>Nightborn</h1>
+      <h1>Night Royale 💸</h1>
     </header>
 
     <section class="balance-card glass" id="balanceCard">
-      <p class="balance-label">Баланс</p>
+      <p class="balance-label">Баланс, UAH</p>
       <div class="balance-row">
         <div class="balance-value" id="balanceValue">0.00</div>
         <div class="balance-unit">₴</div>
       </div>
-      <p class="balance-hint">Завдання, друзі й виплата — усе в гривнях.</p>
+      <p class="balance-hint">Завдання, друзі й виплата — виключно в гривнях.</p>
       <div class="admin-chip" id="adminChip">Адмін-доступ активний</div>
     </section>
 
@@ -284,7 +348,7 @@
         <div class="stack">
           <div class="card glass">
             <h3 class="task-title">Запрошення друга</h3>
-            <p class="task-desc">Поділись посиланням. За кожного друга — 1.00 ₴.</p>
+            <p class="task-desc">Поділись посиланням бота @nightbornbot. За кожного друга — 1.00 ₴.</p>
             <p class="ref-link" id="refLink"></p>
             <button class="btn" id="copyRefBtn" type="button">Скопіювати посилання</button>
           </div>
@@ -299,7 +363,7 @@
         <h2 class="section-title">Виплата</h2>
         <div class="card glass">
           <div class="field">
-            <label for="amount">Сума (₴)</label>
+            <label for="amount">Сума (₴ / UAH)</label>
             <input id="amount" inputmode="decimal" placeholder="Мінімум 1.00 ₴">
           </div>
           <div class="field">
@@ -322,26 +386,28 @@
 
   <script>
     const CONFIG = {
+      brand: "Night Royale 💸",
       botUsername: "nightbornbot",
       githubPages: "https://egormr111.github.io/nightbornbot/",
       channelUrl: "https://t.me/NightCapitallNc",
+      channelUsername: "@NightCapitallNc",
       adminIds: [1099861854, 7641002398],
       minPayout: 1,
       refBonus: 1,
-      storageKey: "nightborn_miniapp_uah_v1"
+      storageKey: "night_royale_uah_v1"
     };
 
     const TASKS = [
       {
         id: "sub_nightcapital",
         title: "Підписка на канал",
-        desc: "Відкрий @NightCapitallNc і підпишись.",
+        desc: "Підпишись на @NightCapitallNc. Нагорода 5.00 ₴ після перевірки ботом.",
         reward: 5
       },
       {
         id: "react_nightcapital",
-        title: "Поставити реакцію",
-        desc: "Постав реакції на пости NightCapitallNc.",
+        title: "Реакція на пост",
+        desc: "Постав лайк/реакцію на останній пост @NightCapitallNc. Нагорода 2.00 ₴ після перевірки ботом.",
         reward: 2
       }
     ];
@@ -351,8 +417,8 @@
       tg.ready();
       tg.expand();
       try {
-        tg.setHeaderColor("#01010a");
-        tg.setBackgroundColor("#01010a");
+        tg.setHeaderColor("#03040c");
+        tg.setBackgroundColor("#03040c");
       } catch (e) {}
     }
 
@@ -372,7 +438,7 @@
     };
     const displayName = user.username
       ? "@" + user.username
-      : [user.firstName, user.lastName].filter(Boolean).join(" ") || "Guest";
+      : [user.firstName, user.lastName].filter(Boolean).join(" ") || CONFIG.brand;
     const initial = (user.firstName || user.username || "N").charAt(0).toUpperCase();
     const isAdmin = CONFIG.adminIds.includes(Number(user.id));
 
@@ -440,39 +506,48 @@
     const renderTasks = () => {
       taskList.innerHTML = TASKS.map((task) => {
         const done = !!state.done[task.id];
-        return `
-          <article class="card glass">
-            <div class="task-top">
-              <div>
-                <h3 class="task-title">${task.title}</h3>
-                <p class="task-desc">${task.desc}</p>
-              </div>
-              <div class="reward">+${formatMoney(task.reward)} ₴</div>
-            </div>
-            <button class="btn" data-task="${task.id}" ${done ? "disabled" : ""} type="button">
-              ${done ? "Виконано" : "Виконати"}
-            </button>
-          </article>`;
+        return (
+          '<article class="card glass">' +
+            '<div class="task-top">' +
+              "<div>" +
+                '<h3 class="task-title">' + task.title + "</h3>" +
+                '<p class="task-desc">' + task.desc + "</p>" +
+              "</div>" +
+              '<div class="reward">+' + formatMoney(task.reward) + " ₴</div>" +
+            "</div>" +
+            '<div class="btn-row">' +
+              '<button class="btn ghost" data-open="' + task.id + '" type="button">Відкрити</button>' +
+              '<button class="btn" data-check="' + task.id + '"' + (done ? " disabled" : "") + ' type="button">' +
+                (done ? "Виконано" : "Перевірити") +
+              "</button>" +
+            "</div>" +
+          "</article>"
+        );
       }).join("");
     };
     renderTasks();
 
     taskList.addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-task]");
-      if (!btn || btn.disabled) return;
-      const id = btn.getAttribute("data-task");
-      const task = TASKS.find((t) => t.id === id);
-      if (!task || state.done[id]) return;
+      const openBtn = e.target.closest("[data-open]");
+      if (openBtn) {
+        haptic("light");
+        openTg(CONFIG.channelUrl);
+        toast("Відкрий " + CONFIG.channelUsername);
+        return;
+      }
+      const checkBtn = e.target.closest("[data-check]");
+      if (!checkBtn || checkBtn.disabled) return;
       haptic("medium");
-      openTg(CONFIG.channelUrl);
-      state.done[id] = true;
-      saveState(state);
-      addBalance(task.reward);
-      renderTasks();
-      toast("+" + formatMoney(task.reward) + " ₴ зараховано");
+      try {
+        if (tg && typeof tg.sendData === "function") {
+          tg.sendData(JSON.stringify({ type: "check_tasks" }));
+        }
+      } catch (err) {}
+      openTg("https://t.me/" + CONFIG.botUsername + "?start=check_tasks");
+      toast("Бот перевіряє підписку та реакцію");
     });
 
-    const refLink = `https://t.me/${CONFIG.botUsername}?start=ref_${user.id || "guest"}`;
+    const refLink = "https://t.me/" + CONFIG.botUsername + "?start=ref_" + (user.id || "guest");
     document.getElementById("refLink").textContent = refLink;
     document.getElementById("refCount").textContent = String(state.refs || 0);
 
@@ -527,7 +602,7 @@
 
       haptic("heavy");
       const text = [
-        "Заявка на виплату Nightborn",
+        "Заявка на виплату Night Royale",
         "user_id: " + (user.id || "demo"),
         "username: " + displayName,
         "amount: " + formatMoney(amount) + " UAH",
@@ -549,7 +624,7 @@
       const startPayload = ("pay_" + (user.id || "0") + "_" + Math.round(amount) + "_" + cardDigits)
         .replace(/[^a-zA-Z0-9_]/g, "")
         .slice(0, 64);
-      const deepLink = `https://t.me/${CONFIG.botUsername}?start=${encodeURIComponent(startPayload)}&text=${encodeURIComponent(text)}`;
+      const deepLink = "https://t.me/" + CONFIG.botUsername + "?start=" + encodeURIComponent(startPayload) + "&text=" + encodeURIComponent(text);
       openTg(deepLink);
       toast("Заявку відкрито в боті");
     });
