@@ -1,503 +1,515 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Night Task — Tasks & Earn</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        :root {
-            --card-bg: rgba(5, 12, 25, 0.85);
-            --card-border: rgba(0, 242, 255, 0.3);
-            --neon-cyan: #00f2ff;
-            --neon-glow: rgba(0, 242, 255, 0.5);
-            --text-color: #ffffff;
-            --text-muted: #8ca3bc;
-            --success-color: #00ff88;
-            --accent-yellow: #ffd700;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Night Royale — Moonlight Edition</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+    :root {
+        --bg-deep: #030712;
+        --card-bg: rgba(10, 18, 38, 0.75);
+        --card-border: rgba(0, 242, 255, 0.25);
+        --neon-cyan: #00f2ff;
+        --neon-glow: rgba(0, 242, 255, 0.4);
+        --moonlight-purple: #8b5cf6;
+        --text-color: #f3f4f6;
+        --text-muted: #94a3b8;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --accent-yellow: #f59e0b;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
 
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #0f172a 0%, var(--bg-deep) 100%);
+        color: var(--text-color);
+        margin: 0;
+        padding: 60px 16px 100px 16px;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        overflow-x: hidden;
+    }
+    .container { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 16px; }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: #020408 url('bg.jpg') no-repeat center center fixed;
-            background-size: cover;
-            color: var(--text-color);
-            margin: 0;
-            padding: 16px 16px 90px 16px;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+    /* ---- Profile badge ---- */
+    .profile-badge {
+        position: fixed; top: 12px; right: 14px; z-index: 200;
+        display: flex; align-items: center; gap: 8px;
+        background: var(--card-bg); border: 1px solid var(--card-border);
+        backdrop-filter: blur(20px); border-radius: 999px;
+        padding: 6px 14px 6px 6px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    }
+    .profile-avatar {
+        width: 26px; height: 26px; border-radius: 50%;
+        background: linear-gradient(135deg, var(--neon-cyan), var(--moonlight-purple));
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12px; font-weight: 900; color: #030712;
+    }
+    .profile-name { font-size: 11px; font-weight: 700; color: var(--text-color); max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .profile-id { font-size: 9px; color: var(--text-muted); }
 
-        body::before {
-            content: "";
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(2, 6, 15, 0.75);
-            z-index: -1;
-        }
+    .header { text-align: center; padding: 4px 0 12px 0; }
+    .header h1 {
+        margin: 0; font-size: 26px; font-weight: 900; letter-spacing: 2.5px;
+        background: linear-gradient(135deg, #ffffff 20%, var(--neon-cyan) 80%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 30px var(--neon-glow);
+    }
+    .header p { margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted); }
 
-        .container {
-            width: 100%;
-            max-width: 420px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
+    .balance-card, .task-item, .card-box, .ref-box {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+    }
+    .balance-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2.5px; color: var(--text-muted); }
+    .balance-amount {
+        font-size: 38px; font-weight: 900; margin: 8px 0 0 0; color: var(--neon-cyan);
+        text-shadow: 0 0 25px var(--neon-glow);
+        transition: text-shadow 0.15s ease;
+    }
+    .balance-amount.pulse { animation: balancePulse 0.6s ease; }
+    @keyframes balancePulse {
+        0%   { text-shadow: 0 0 25px var(--neon-glow); transform: scale(1); }
+        30%  { text-shadow: 0 0 55px var(--neon-cyan), 0 0 20px var(--neon-cyan); transform: scale(1.08); }
+        100% { text-shadow: 0 0 25px var(--neon-glow); transform: scale(1); }
+    }
 
-        .header {
-            text-align: center;
-            padding: 10px 0;
-            animation: fadeInDown 0.8s ease-out;
-        }
+    /* ---- Tabs with transitions ---- */
+    .tab-content {
+        display: none; flex-direction: column; gap: 12px;
+    }
+    .tab-content.active { display: flex; }
+    .tab-content.enter {
+        animation: tabIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    @keyframes tabIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
 
-        .header h1 {
-            margin: 0;
-            font-size: 28px;
-            font-weight: 900;
-            letter-spacing: 2px;
-            background: linear-gradient(135deg, #ffffff 30%, var(--neon-cyan) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 25px var(--neon-glow);
-            animation: pulseGlow 3s infinite alternate;
-        }
+    .section-title { font-size: 14px; font-weight: 700; margin: 4px 0; color: #e2e8f0; }
 
-        .header p {
-            margin: 6px 0 0;
-            font-size: 11px;
-            color: var(--text-muted);
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-        }
+    .task-item {
+        display: flex; justify-content: space-between; align-items: center;
+        position: relative; overflow: hidden;
+        transition: box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+    .task-item:active {
+        border-color: var(--neon-cyan);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 22px var(--neon-glow);
+    }
+    .task-info { display: flex; flex-direction: column; gap: 2px; }
+    .task-title { font-size: 14px; font-weight: 600; }
+    .task-reward { font-size: 12px; color: var(--neon-cyan); }
 
-        .balance-card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            backdrop-filter: blur(16px);
-            border-radius: 22px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.7), inset 0 0 25px rgba(0, 242, 255, 0.1);
-            animation: fadeInUp 0.8s ease-out;
-            position: relative;
-            overflow: hidden;
-        }
+    .card-box, .ref-box { flex-direction: column; align-items: stretch; gap: 12px; }
 
-        .balance-title {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--text-muted);
-        }
+    .input-field {
+        width: 100%; background: rgba(2, 6, 23, 0.6);
+        border: 1px solid var(--card-border); border-radius: 12px;
+        padding: 12px 14px; color: #fff; font-size: 14px; outline: none;
+        letter-spacing: 0.5px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .input-field:focus { border-color: var(--neon-cyan); box-shadow: 0 0 12px var(--neon-glow); }
+    .input-label { font-size: 12px; color: var(--text-muted); margin-bottom: -4px; }
 
-        .balance-amount {
-            font-size: 36px;
-            font-weight: 900;
-            margin: 8px 0 0 0;
-            color: var(--neon-cyan);
-            text-shadow: 0 0 20px var(--neon-glow);
-            transition: transform 0.3s ease;
-        }
+    /* ---- Buttons with glow-pulse on press ---- */
+    .btn {
+        position: relative; overflow: hidden;
+        background: linear-gradient(135deg, var(--neon-cyan) 0%, #0284c7 100%);
+        color: #030712; border: none; padding: 13px 18px; border-radius: 12px;
+        font-weight: 800; font-size: 14px; cursor: pointer;
+        box-shadow: 0 0 20px var(--neon-glow); width: 100%;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn.glow-hit { animation: glowHit 0.45s ease; }
+    @keyframes glowHit {
+        0%   { box-shadow: 0 0 20px var(--neon-glow); }
+        40%  { box-shadow: 0 0 45px var(--neon-cyan), 0 0 20px var(--neon-cyan); }
+        100% { box-shadow: 0 0 20px var(--neon-glow); }
+    }
+    .btn-done { background: rgba(255, 255, 255, 0.05) !important; color: var(--text-muted) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; box-shadow: none !important; cursor: default; }
 
-        .balance-amount.pulse {
-            transform: scale(1.08);
-        }
+    /* ripple */
+    .ripple {
+        position: absolute; border-radius: 50%; pointer-events: none;
+        background: rgba(255, 255, 255, 0.5);
+        transform: scale(0); animation: rippleOut 0.55s ease-out;
+    }
+    @keyframes rippleOut {
+        to { transform: scale(3); opacity: 0; }
+    }
 
-        .tab-content {
-            display: none;
-            flex-direction: column;
-            gap: 12px;
-            animation: fadeIn 0.4s ease-in-out;
-        }
+    .ref-link-row { display: flex; gap: 8px; align-items: center; }
+    .ref-link-text {
+        flex: 1; font-size: 11px; color: var(--moonlight-purple);
+        background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3);
+        border-radius: 10px; padding: 10px 12px; word-break: break-all;
+    }
+    .btn-copy {
+        background: rgba(139, 92, 246, 0.15); color: var(--moonlight-purple);
+        border: 1px solid rgba(139, 92, 246, 0.4); border-radius: 10px;
+        padding: 10px 14px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;
+        transition: transform 0.15s ease;
+    }
+    .btn-copy:active { transform: scale(0.94); }
+    .ref-count { font-size: 13px; color: var(--text-muted); }
+    .ref-count span { color: var(--neon-cyan); font-weight: 700; }
 
-        .tab-content.active {
-            display: flex;
-        }
+    .nav-bar {
+        position: fixed; bottom: 0; left: 0; width: 100%;
+        background: rgba(3, 7, 18, 0.85); backdrop-filter: blur(20px);
+        border-top: 1px solid var(--card-border);
+        display: flex; justify-content: space-around; padding: 10px 0 16px 0; z-index: 100;
+    }
+    .nav-item {
+        background: none; border: none; color: var(--text-muted);
+        font-size: 10px; font-weight: 700; display: flex; flex-direction: column;
+        align-items: center; gap: 4px; cursor: pointer; flex: 1;
+        transition: color 0.2s ease, text-shadow 0.2s ease;
+    }
+    .nav-item .icon { font-size: 18px; transition: transform 0.2s ease; }
+    .nav-item.active { color: var(--neon-cyan); text-shadow: 0 0 15px var(--neon-glow); }
+    .nav-item.active .icon { transform: translateY(-2px); }
 
-        .section-title {
-            font-size: 15px;
-            font-weight: 700;
-            margin: 4px 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #d1e8ff;
-        }
-
-        .task-list, .sponsors-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .task-item, .card-box {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            backdrop-filter: blur(12px);
-            border-radius: 16px;
-            padding: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.5);
-            animation: fadeInUp 0.6s ease-out backwards;
-        }
-
-        .card-box {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .task-info h4, .card-box h4 {
-            margin: 0;
-            font-size: 14px;
-            font-weight: 700;
-        }
-
-        .task-info p {
-            margin: 6px 0 0;
-            font-size: 13px;
-            color: var(--success-color);
-            font-weight: 800;
-        }
-
-        .card-box p {
-            margin: 0;
-            font-size: 12px;
-            color: var(--text-muted);
-            line-height: 1.4;
-        }
-
-        .input-field {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid var(--card-border);
-            border-radius: 10px;
-            padding: 12px;
-            color: #fff;
-            font-size: 14px;
-            outline: none;
-            transition: all 0.3s;
-        }
-
-        .input-field:focus {
-            border-color: var(--neon-cyan);
-            box-shadow: 0 0 12px rgba(0, 242, 255, 0.3);
-        }
-
-        .btn {
-            background: linear-gradient(135deg, var(--neon-cyan) 0%, #0066ff 100%);
-            color: #000;
-            border: none;
-            padding: 10px 18px;
-            border-radius: 12px;
-            font-weight: 800;
-            font-size: 12px;
-            cursor: pointer;
-            box-shadow: 0 0 15px var(--neon-glow);
-            transition: all 0.2s ease;
-        }
-
-        .btn:active {
-            transform: scale(0.92);
-        }
-
-        .btn-yellow {
-            background: linear-gradient(135deg, var(--accent-yellow) 0%, #ff8800 100%);
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
-        }
-
-        .btn-done {
-            background: rgba(255, 255, 255, 0.06) !important;
-            color: var(--text-muted) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            box-shadow: none !important;
-            cursor: default !important;
-        }
-
-        .nav-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: rgba(3, 8, 18, 0.94);
-            backdrop-filter: blur(20px);
-            border-top: 1px solid var(--card-border);
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            z-index: 100;
-            box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
-        }
-
-        .nav-item {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            font-size: 10px;
-            font-weight: 700;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 3px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            flex: 1;
-        }
-
-        .nav-item span {
-            font-size: 18px;
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .nav-item.active {
-            color: var(--neon-cyan);
-            text-shadow: 0 0 12px var(--neon-glow);
-        }
-
-        .nav-item.active span {
-            transform: translateY(-2px) scale(1.15);
-        }
-
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes pulseGlow {
-            0% { text-shadow: 0 0 15px rgba(0, 242, 255, 0.4); }
-            100% { text-shadow: 0 0 25px rgba(0, 242, 255, 0.8), 0 0 5px #fff; }
-        }
-
-        .checking span {
-            animation: blink 1.2s infinite;
-        }
-        .checking span:nth-child(2) { animation-delay: 0.2s; }
-        .checking span:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes blink {
-            0%, 20% { opacity: 0.2; }
-            50% { opacity: 1; }
-            80%, 100% { opacity: 0.2; }
-        }
-    </style>
+    /* ---- Toasts ---- */
+    #toastContainer {
+        position: fixed; bottom: 92px; left: 50%; transform: translateX(-50%);
+        display: flex; flex-direction: column-reverse; gap: 8px; z-index: 300;
+        width: calc(100% - 32px); max-width: 388px; pointer-events: none;
+    }
+    .toast {
+        pointer-events: auto;
+        background: rgba(10, 18, 38, 0.92); backdrop-filter: blur(20px);
+        border-radius: 12px; padding: 12px 16px; font-size: 13px;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+        border-left: 3px solid var(--neon-cyan);
+        animation: toastIn 0.28s cubic-bezier(0.22, 1, 0.36, 1), toastOut 0.28s ease 2.5s forwards;
+    }
+    .toast.success { border-left-color: var(--success-color); }
+    .toast.error { border-left-color: var(--danger-color); }
+    @keyframes toastIn {
+        from { opacity: 0; transform: translateY(14px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes toastOut {
+        to { opacity: 0; transform: translateY(14px); }
+    }
+</style>
 </head>
 <body>
 
+<div class="profile-badge" id="profileBadge">
+    <div class="profile-avatar" id="profileAvatar">?</div>
+    <div>
+        <div class="profile-name" id="profileName">Гість</div>
+        <div class="profile-id" id="profileId">ID: —</div>
+    </div>
+</div>
+
+<div id="toastContainer"></div>
+
 <div class="container">
     <div class="header">
-        <h1>NIGHT TASK 🌙</h1>
-        <p>Крипто-екосистема завдань</p>
+        <h1>Night Royale 💸</h1>
+        <p>Moonlight Cyber Ecosystem</p>
     </div>
 
     <div class="balance-card">
-        <div class="balance-title">Твій Баланс</div>
+        <div class="balance-label">Твій баланс</div>
         <div class="balance-amount" id="balance">0.00 ₴</div>
     </div>
 
+    <!-- TASKS TAB -->
     <div id="tab-tasks" class="tab-content active">
-        <div class="section-title">⚡ Активні завдання</div>
-        <div class="task-list">
-            <div class="task-item">
-                <div class="task-info">
-                    <h4>Підписка на канал спонсора 📢</h4>
-                    <p>+5.00 ₴</p>
-                </div>
-                <button class="btn" id="btn-task1" onclick="startTaskCheck('task1', 5, 'https://t.me/NightCapitallNc')">Виконати</button>
-            </div>
+        <div class="section-title">Доступні завдання</div>
 
-            <div class="task-item">
-                <div class="task-info">
-                    <h4>Поставити реакцію на пост 🔥</h4>
-                    <p>+2.00 ₴</p>
-                </div>
-                <button class="btn" id="btn-task2" onclick="startTaskCheck('task2', 2, 'https://t.me/NightCapitallNc')">Виконати</button>
+        <div class="task-item">
+            <div class="task-info">
+                <div class="task-title">Підписка на канал 📢</div>
+                <div class="task-reward">+5.00 ₴</div>
             </div>
+            <button class="btn" style="width:auto;" onclick="openChannelTask(this, 5.0, event)">Виконати</button>
+        </div>
 
-            <div class="task-item">
-                <div class="task-info">
-                    <h4>Написати коментар 💬</h4>
-                    <p>+3.00 ₴</p>
-                </div>
-                <button class="btn" id="btn-task3" onclick="startTaskCheck('task3', 3, 'https://t.me/NightCapitallNc')">Виконати</button>
+        <div class="task-item">
+            <div class="task-info">
+                <div class="task-title">Поставити реакцію ❤️</div>
+                <div class="task-reward">+2.00 ₴</div>
             </div>
+            <button class="btn" style="width:auto;" onclick="openChannelTask(this, 2.0, event)">Виконати</button>
+        </div>
+
+        <div class="task-item">
+            <div class="task-info">
+                <div class="task-title">Запросити друга</div>
+                <div class="task-reward">+1.00 ₴</div>
+            </div>
+            <button class="btn" style="width:auto;" onclick="switchTab('referral', event)">Перейти</button>
         </div>
     </div>
 
-    <div id="tab-refs" class="tab-content">
-        <div class="section-title">👥 Запрошуй друзів</div>
+    <!-- REFERRAL TAB -->
+    <div id="tab-referral" class="tab-content">
+        <div class="ref-box">
+            <div class="section-title">Твоє реферальне посилання</div>
+            <div class="ref-link-row">
+                <div class="ref-link-text" id="refLink">завантаження...</div>
+                <button class="btn-copy" onclick="copyRefLink(event)">Копіювати</button>
+            </div>
+            <div class="ref-count">Запрошено друзів: <span id="refCount">0</span></div>
+        </div>
+    </div>
+
+    <!-- WITHDRAW TAB -->
+    <div id="tab-withdraw" class="tab-content">
         <div class="card-box">
-            <h4>Твоє реферальне посилання 🔗</h4>
-            <p>Отримуй <b>+3.00 ₴</b> за кожного запрошеного друга!</p>
-            <input type="text" id="refLink" class="input-field" value="https://t.me/NightTaskBot?start=ref123" readonly style="font-size: 12px; margin-top: 4px;">
-            <button class="btn btn-yellow" onclick="copyRefLink()" style="width: 100%; margin-top: 6px;">Скопіювати посилання</button>
-        </div>
-    </div>
+            <div class="section-title">Замовити виплату</div>
 
-    <div id="tab-sponsors" class="tab-content">
-        <div class="section-title">💼 Наші партнери</div>
-        <div class="sponsors-list">
-            <div class="card-box">
-                <h4>Night Capital 🌙</h4>
-                <p>Головний партнер та інформаційний спонсор проєкту.</p>
-                <a href="https://t.me/NightCapitallNc" target="_blank" style="margin-top: 4px; width: 100%;"><button class="btn" style="width: 100%;">Перейти у канал</button></a>
+            <div>
+                <div class="input-label">Сума (₴)</div>
+                <input type="number" id="amountInput" class="input-field" placeholder="Мінімум 1 ₴" min="1" step="0.01" inputmode="decimal">
             </div>
+
+            <div>
+                <div class="input-label">Номер картки</div>
+                <input type="text" id="cardInput" class="input-field" placeholder="0000 0000 0000 0000" inputmode="numeric" maxlength="23">
+            </div>
+
+            <button class="btn" id="withdrawBtn" onclick="requestWithdraw(event)">Замовити виплату</button>
         </div>
     </div>
-
-    <div id="tab-profile" class="tab-content">
-        <div class="section-title">👤 Виведення коштів</div>
-        <div class="card-box">
-            <h4>Замовити виплату 💳</h4>
-            <p>Мінімум для виведення: <span style="color: #fff;">1.00 ₴</span></p>
-            <input type="text" id="cardNumber" class="input-field" placeholder="Номер картки (4441 ...)" style="margin-top: 6px;">
-            <button class="btn" onclick="requestWithdrawal()" style="margin-top: 8px; width: 100%;">Замовити виплату</button>
-        </div>
-    </div>
-
 </div>
 
-<nav class="nav-bar">
-    <button class="nav-item active" onclick="switchTab('tasks', this)">
-        <span>⚡</span>Завдання
+<div class="nav-bar">
+    <button class="nav-item active" id="nav-tasks" onclick="switchTab('tasks', event)">
+        <span class="icon">📋</span><span>Завдання</span>
     </button>
-    <button class="nav-item" onclick="switchTab('refs', this)">
-        <span>👥</span>Друзі
+    <button class="nav-item" id="nav-referral" onclick="switchTab('referral', event)">
+        <span class="icon">👥</span><span>Реферали</span>
     </button>
-    <button class="nav-item" onclick="switchTab('sponsors', this)">
-        <span>💼</span>Партнери
+    <button class="nav-item" id="nav-withdraw" onclick="switchTab('withdraw', event)">
+        <span class="icon">💳</span><span>Виплата</span>
     </button>
-    <button class="nav-item" onclick="switchTab('profile', this)">
-        <span>👤</span>Профіль
-    </button>
-</nav>
+</div>
 
 <script>
-    let tg = window.Telegram.WebApp;
+    const tg = window.Telegram.WebApp;
+    tg.ready();
     tg.expand();
 
-    let currentBalance = parseFloat(localStorage.getItem('night_balance')) || 0;
-    updateBalanceDisplay(currentBalance, false);
+    // ---- State ----
+    let balance = 0;
+    let displayedBalance = 0;
+    const tgUser = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user : null;
+    const userId = tgUser ? tgUser.id : null;
+    const BOT_USERNAME = "your_bot_username"; // заміни на реальний username бота (без @)
+    const CHANNEL_URL = "https://t.me/NightCapitallNc";
+    const MIN_WITHDRAW = 1;
 
-    const tasks = ['task1', 'task2', 'task3'];
+    // ---- Toasts ----
+    function showToast(message, type = "success") {
+        const container = document.getElementById("toastContainer");
+        const el = document.createElement("div");
+        el.className = "toast " + type;
+        el.textContent = message;
+        container.appendChild(el);
+        setTimeout(() => el.remove(), 2900);
+    }
 
-    tasks.forEach(taskId => {
-        if (localStorage.getItem(taskId) === 'true') {
-            let btn = document.getElementById('btn-' + taskId);
-            if(btn) {
-                btn.innerText = 'Виконано ✓';
-                btn.className = 'btn btn-done';
-                btn.onclick = null;
+    // ---- Ripple effect on any .btn / .nav-item click ----
+    function spawnRipple(target, event) {
+        const rect = target.getBoundingClientRect();
+        const ripple = document.createElement("span");
+        const size = Math.max(rect.width, rect.height);
+        ripple.className = "ripple";
+        ripple.style.width = ripple.style.height = size + "px";
+        const x = (event.clientX || rect.left + rect.width / 2) - rect.left - size / 2;
+        const y = (event.clientY || rect.top + rect.height / 2) - rect.top - size / 2;
+        ripple.style.left = x + "px";
+        ripple.style.top = y + "px";
+        target.style.position = target.style.position || "relative";
+        target.style.overflow = "hidden";
+        target.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
+    }
+
+    function pressGlow(target, event) {
+        if (event) spawnRipple(target, event);
+        target.classList.remove("glow-hit");
+        void target.offsetWidth; // restart animation
+        target.classList.add("glow-hit");
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    }
+
+    // ---- Balance animation ----
+    function animateBalanceTo(target) {
+        const start = displayedBalance;
+        const diff = target - start;
+        const duration = 500;
+        const startTime = performance.now();
+
+        function step(now) {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            displayedBalance = start + diff * eased;
+            document.getElementById("balance").textContent = displayedBalance.toFixed(2) + " ₴";
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            } else {
+                displayedBalance = target;
+                const el = document.getElementById("balance");
+                el.classList.remove("pulse");
+                void el.offsetWidth;
+                el.classList.add("pulse");
             }
         }
-    });
-
-    function updateBalanceDisplay(amount, animate = true) {
-        let balanceEl = document.getElementById('balance');
-        balanceEl.innerText = amount.toFixed(2) + ' ₴';
-        if (animate) {
-            balanceEl.classList.add('pulse');
-            setTimeout(() => balanceEl.classList.remove('pulse'), 300);
-        }
+        requestAnimationFrame(step);
     }
 
-    function startTaskCheck(taskId, reward, url) {
-        if (localStorage.getItem(taskId) === 'true') return;
-
-        let btn = document.getElementById('btn-' + taskId);
-        btn.innerHTML = `Перевірка<span class="checking"><span>.</span><span>.</span><span>.</span></span>`;
-        btn.disabled = true;
-
-        window.open(url, '_blank');
-
-        setTimeout(() => {
-            currentBalance += reward;
-            localStorage.setItem('night_balance', currentBalance);
-            localStorage.setItem(taskId, 'true');
-
-            updateBalanceDisplay(currentBalance, true);
-            
-            btn.innerText = 'Виконано ✓';
-            btn.className = 'btn btn-done';
-            btn.disabled = true;
-            btn.onclick = null;
-            
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            alert(`✅ Завдання успішно зараховано! Нараховано +${reward.toFixed(2)} ₴`);
-        }, 4000);
+    function setBalance(newValue) {
+        balance = newValue;
+        animateBalanceTo(newValue);
     }
 
-    function copyRefLink() {
-        let refInput = document.getElementById('refLink');
-        refInput.select();
-        refInput.setSelectionRange(0, 99999);
-        navigator.clipboard.writeText(refInput.value);
-        
-        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-        alert('📋 Реферальне посилання скопійовано у буфер обміну!');
+    // ---- Tabs ----
+    function switchTab(tabName, event) {
+        if (event && event.currentTarget) pressGlow(event.currentTarget, event);
+
+        document.querySelectorAll(".tab-content").forEach(el => {
+            el.classList.remove("active", "enter");
+        });
+        document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+
+        const tabEl = document.getElementById("tab-" + tabName);
+        tabEl.classList.add("active", "enter");
+        document.getElementById("nav-" + tabName).classList.add("active");
     }
 
-    function requestWithdrawal() {
-        let card = document.getElementById('cardNumber').value.trim();
-        
-        // Змінено перевірку мінімальної суми на 1 ₴
-        if (currentBalance < 1) {
-            alert('❌ Недостатньо коштів! Мінімальна сума для виведення — 1 ₴.');
-            return;
-        }
-        if (card.length < 16) {
-            alert('❌ Введіть коректний номер картки (мінімум 16 цифр)!');
-            return;
-        }
+    // ---- Tasks ----
+    function completeTask(btnEl, reward, event) {
+        if (btnEl.classList.contains("btn-done")) return;
+        pressGlow(btnEl, event);
+        setBalance(balance + reward);
+        btnEl.textContent = "Виконано";
+        btnEl.classList.add("btn-done");
+        btnEl.disabled = true;
+        showToast(`Нараховано +${reward.toFixed(2)} ₴`, "success");
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+    }
 
-        let data = {
-            action: "withdraw",
-            amount: currentBalance,
-            card: card
-        };
+    // Завдання, пов'язані з каналом: відкриваємо канал, а винагороду нараховуємо
+    // одразу після повернення в Mini App (без серверної перевірки підписки).
+    function openChannelTask(btnEl, reward, event) {
+        if (btnEl.classList.contains("btn-done")) return;
+        pressGlow(btnEl, event);
 
-        if (tg.sendData) {
-            tg.sendData(JSON.stringify(data)); // Відправляє дані боту @DarkkkNc
+        if (tg.openTelegramLink) {
+            tg.openTelegramLink(CHANNEL_URL);
         } else {
-            alert('💳 Заявку на виплату прийнято! (Тестовий режим)');
+            window.open(CHANNEL_URL, "_blank");
         }
+
+        // Невелика затримка, щоб нарахування виглядало як реакція на повернення користувача
+        setTimeout(() => {
+            completeTask(btnEl, reward, null);
+        }, 600);
     }
 
-    function switchTab(tabName, element) {
-        document.querySelectorAll('.tab-content').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.classList.remove('active');
-        });
-
-        document.getElementById('tab-' + tabName).classList.add('active');
-        element.classList.add('active');
-
-        if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+    // ---- Profile badge ----
+    function initProfile() {
+        if (!tgUser) return;
+        const name = tgUser.username ? "@" + tgUser.username : (tgUser.first_name || "Гравець");
+        document.getElementById("profileName").textContent = name;
+        document.getElementById("profileId").textContent = "ID: " + tgUser.id;
+        const initial = (tgUser.first_name || tgUser.username || "?").charAt(0).toUpperCase();
+        document.getElementById("profileAvatar").textContent = initial;
     }
+
+    // ---- Referral ----
+    function initReferral() {
+        const linkEl = document.getElementById("refLink");
+        if (!userId) {
+            linkEl.textContent = "Помилка: не вдалося визначити ID користувача.";
+            return;
+        }
+        const link = `https://t.me/${BOT_USERNAME}?start=ref_${userId}`;
+        linkEl.textContent = link;
+    }
+
+    function copyRefLink(event) {
+        if (event && event.currentTarget) pressGlow(event.currentTarget, event);
+        const text = document.getElementById("refLink").textContent;
+        navigator.clipboard.writeText(text).then(() => {
+            showToast("Посилання скопійовано!", "success");
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+        }).catch(() => {
+            showToast("Не вдалося скопіювати. Спробуй вручну.", "error");
+        });
+    }
+
+    // ---- Card input formatting (groups of 4 digits) ----
+    function formatCardInput(inputEl) {
+        inputEl.addEventListener("input", () => {
+            const digitsOnly = inputEl.value.replace(/\D/g, "").slice(0, 19);
+            const groups = digitsOnly.match(/.{1,4}/g) || [];
+            inputEl.value = groups.join(" ");
+        });
+    }
+
+    function validateCardFormat(card) {
+        const digits = card.replace(/\s/g, "");
+        return /^\d{13,19}$/.test(digits);
+    }
+
+    // ---- Withdraw ----
+    function requestWithdraw(event) {
+        const btn = document.getElementById("withdrawBtn");
+        if (event) pressGlow(btn, event);
+
+        const amountRaw = document.getElementById("amountInput").value;
+        const cardRaw = document.getElementById("cardInput").value.trim();
+        const amount = parseFloat(amountRaw);
+
+        if (isNaN(amount) || amount < MIN_WITHDRAW) {
+            showToast(`Мінімальна сума виплати — ${MIN_WITHDRAW} ₴.`, "error");
+            return;
+        }
+        if (amount > balance) {
+            showToast("Недостатньо коштів на балансі.", "error");
+            return;
+        }
+        if (!validateCardFormat(cardRaw)) {
+            showToast("Некоректний номер картки. Введи 13–19 цифр.", "error");
+            return;
+        }
+
+        const payload = { action: "withdraw", amount: amount, card: cardRaw };
+        showToast("Надсилаємо заявку...", "success");
+
+        // sendData() закриває Mini App одразу після виклику
+        tg.sendData(JSON.stringify(payload));
+    }
+
+    // ---- Init ----
+    document.getElementById("balance").textContent = "0.00 ₴";
+    formatCardInput(document.getElementById("cardInput"));
+    initProfile();
+    initReferral();
 </script>
-
 </body>
 </html>
