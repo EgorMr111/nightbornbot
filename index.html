@@ -4,19 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Night Royale 💸</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
-      --cyan: #7df0ff;
-      --cyan-2: #22d3ee;
-      --purple: #c4b5fd;
-      --violet: #7c3aed;
-      --text: #f7f8ff;
-      --muted: rgba(226, 232, 255, 0.78);
+      --cyan: #00e5ff;
+      --cyan-2: #7df0ff;
+      --black: #000000;
+      --text: #f4fbff;
+      --muted: rgba(214, 242, 255, 0.72);
       --ok: #86efac;
       --danger: #fda4af;
-      --glass: rgba(8, 10, 28, 0.55);
-      --glass-2: rgba(6, 8, 22, 0.72);
+      --glass: rgba(0, 0, 0, 0.62);
+      --glass-2: rgba(2, 8, 16, 0.82);
       --nav-h: 78px;
       --safe-b: env(safe-area-inset-bottom, 0px);
     }
@@ -25,12 +27,12 @@
     html, body { margin: 0; width: 100%; max-width: 100%; overflow-x: hidden; }
 
     body {
-      font-family: "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+      font-family: Montserrat, "Segoe UI", system-ui, sans-serif;
       color: var(--text);
       min-height: 100dvh;
-      background-color: #03040c;
+      background-color: var(--black);
       background-image:
-        linear-gradient(180deg, rgba(2, 4, 16, 0.78) 0%, rgba(8, 6, 24, 0.72) 42%, rgba(4, 8, 22, 0.82) 100%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.55) 40%, rgba(0, 0, 0, 0.82) 100%),
         url("bg.jpg");
       background-size: cover;
       background-position: center;
@@ -45,8 +47,8 @@
       pointer-events: none;
       z-index: 0;
       background:
-        radial-gradient(700px 420px at 88% -8%, rgba(124, 58, 237, 0.28), transparent 58%),
-        radial-gradient(560px 380px at -10% 18%, rgba(34, 211, 238, 0.16), transparent 55%);
+        radial-gradient(640px 380px at 88% -8%, rgba(0, 229, 255, 0.16), transparent 58%),
+        radial-gradient(520px 340px at -8% 18%, rgba(0, 229, 255, 0.10), transparent 55%);
     }
 
     .app {
@@ -57,6 +59,7 @@
       max-width: 480px;
       margin: 0 auto;
     }
+    .app.locked { filter: blur(7px); pointer-events: none; user-select: none; }
 
     .badge {
       position: fixed;
@@ -70,10 +73,10 @@
       padding: 7px 11px 7px 7px;
       border-radius: 999px;
       background: var(--glass-2);
-      border: 1px solid rgba(125, 240, 255, 0.4);
+      border: 1px solid rgba(0, 229, 255, 0.45);
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
-      box-shadow: 0 0 22px rgba(125, 240, 255, 0.18);
+      box-shadow: 0 0 22px rgba(0, 229, 255, 0.22);
     }
     .avatar {
       width: 34px;
@@ -81,17 +84,17 @@
       border-radius: 50%;
       display: grid;
       place-items: center;
-      font-weight: 760;
+      font-weight: 800;
       font-size: 14px;
-      color: #071018;
-      background: linear-gradient(145deg, var(--cyan), var(--violet));
-      box-shadow: 0 0 12px rgba(125, 240, 255, 0.45);
+      color: #041018;
+      background: linear-gradient(145deg, var(--cyan), #1488a8);
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.55);
       flex-shrink: 0;
     }
     .badge-meta { min-width: 0; }
     .badge-name {
       font-size: 12px;
-      font-weight: 680;
+      font-weight: 700;
       line-height: 1.15;
       white-space: nowrap;
       overflow: hidden;
@@ -109,26 +112,27 @@
     .kicker {
       margin: 0 0 6px;
       font-size: 11px;
-      letter-spacing: .2em;
+      letter-spacing: .22em;
       text-transform: uppercase;
-      color: var(--purple);
+      color: var(--cyan);
+      text-shadow: 0 0 16px rgba(0, 229, 255, 0.55);
     }
     h1 {
       margin: 0;
       font-size: 26px;
-      font-weight: 760;
+      font-weight: 800;
       letter-spacing: -.03em;
-      text-shadow: 0 0 22px rgba(125, 240, 255, 0.28);
+      text-shadow: 0 0 22px rgba(0, 229, 255, 0.38);
     }
 
     .glass {
       background: var(--glass);
-      border: 1px solid rgba(125, 240, 255, 0.32);
+      border: 1px solid rgba(0, 229, 255, 0.32);
       backdrop-filter: blur(22px);
       -webkit-backdrop-filter: blur(22px);
       box-shadow:
-        0 0 28px rgba(124, 58, 237, 0.18),
-        inset 0 1px 0 rgba(255, 255, 255, .12);
+        0 0 28px rgba(0, 229, 255, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, .08);
     }
 
     .balance-card {
@@ -139,9 +143,9 @@
     }
     .balance-card.pulse { animation: pulseGlow .95s ease; }
     @keyframes pulseGlow {
-      0% { box-shadow: 0 0 0 rgba(125, 240, 255, 0); }
-      40% { box-shadow: 0 0 46px rgba(125, 240, 255, .5); }
-      100% { box-shadow: 0 0 28px rgba(124, 58, 237, 0.18); }
+      0% { box-shadow: 0 0 0 rgba(0, 229, 255, 0); }
+      40% { box-shadow: 0 0 46px rgba(0, 229, 255, .5); }
+      100% { box-shadow: 0 0 28px rgba(0, 229, 255, 0.12); }
     }
     .balance-label {
       margin: 0;
@@ -153,13 +157,11 @@
     .balance-row { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; }
     .balance-value {
       font-size: 40px;
-      font-weight: 780;
+      font-weight: 800;
       letter-spacing: -.04em;
       line-height: 1;
-      background: linear-gradient(92deg, #fff 10%, var(--cyan) 55%, var(--purple) 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
+      color: var(--cyan);
+      text-shadow: 0 0 22px rgba(0, 229, 255, 0.45);
     }
     .balance-unit { color: var(--cyan); font-weight: 700; font-size: 18px; }
     .balance-hint { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
@@ -170,11 +172,18 @@
       padding: 5px 10px;
       border-radius: 999px;
       font-size: 11px;
-      color: var(--purple);
-      border: 1px solid rgba(196, 181, 253, .45);
-      background: rgba(124, 58, 237, .16);
+      color: var(--cyan);
+      border: 1px solid rgba(0, 229, 255, .45);
+      background: rgba(0, 229, 255, .12);
     }
     .admin-chip.show { display: inline-flex; }
+    .sync-chip {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .sync-chip.ok { color: var(--ok); }
+    .sync-chip.bad { color: var(--danger); }
 
     .tabs-wrap { margin-top: 18px; }
     .panel { display: none; animation: fadeSlide .3s ease; }
@@ -183,7 +192,7 @@
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: none; }
     }
-    .section-title { margin: 0 0 12px; font-size: 15px; font-weight: 680; }
+    .section-title { margin: 0 0 12px; font-size: 15px; font-weight: 700; }
     .task-list, .stack { display: flex; flex-direction: column; gap: 12px; }
     .card { padding: 16px; border-radius: 20px; }
     .task-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
@@ -192,30 +201,30 @@
     .reward {
       flex-shrink: 0;
       font-size: 12px;
-      font-weight: 760;
+      font-weight: 800;
       color: var(--cyan);
       padding: 4px 8px;
       border-radius: 999px;
-      border: 1px solid rgba(125, 240, 255, .4);
-      background: rgba(34, 211, 238, .12);
-      box-shadow: 0 0 12px rgba(125, 240, 255, .15);
+      border: 1px solid rgba(0, 229, 255, .4);
+      background: rgba(0, 229, 255, .12);
+      box-shadow: 0 0 12px rgba(0, 229, 255, .18);
     }
 
     .btn {
       width: 100%;
       margin-top: 14px;
-      border: 0;
+      border: 1px solid rgba(0, 229, 255, 0.55);
       border-radius: 14px;
       padding: 12px 14px;
       font-size: 14px;
-      font-weight: 760;
-      color: #071018;
-      background: linear-gradient(135deg, var(--cyan) 0%, #a78bfa 100%);
-      box-shadow: 0 0 22px rgba(125, 240, 255, .32);
+      font-weight: 800;
+      color: var(--cyan);
+      background: rgba(0, 0, 0, 0.55);
+      box-shadow: 0 0 22px rgba(0, 229, 255, .28);
       cursor: pointer;
       transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
     }
-    .btn:hover { filter: brightness(1.06); box-shadow: 0 0 28px rgba(125, 240, 255, .48); }
+    .btn:hover { filter: brightness(1.08); box-shadow: 0 0 28px rgba(0, 229, 255, .48); }
     .btn:active { transform: scale(.97); }
     .btn:disabled {
       cursor: default;
@@ -230,8 +239,8 @@
     .btn-row .btn { margin-top: 0; }
     .btn.ghost {
       color: var(--text);
-      background: rgba(255, 255, 255, .08);
-      border: 1px solid rgba(125, 240, 255, .28);
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(0, 229, 255, .28);
       box-shadow: none;
     }
 
@@ -245,8 +254,8 @@
     .field { margin-bottom: 12px; }
     input {
       width: 100%;
-      border: 1px solid rgba(125, 240, 255, .22);
-      background: rgba(2, 6, 20, .55);
+      border: 1px solid rgba(0, 229, 255, .22);
+      background: rgba(0, 0, 0, .55);
       color: var(--text);
       border-radius: 14px;
       padding: 13px 14px;
@@ -256,7 +265,7 @@
     }
     input:focus {
       border-color: var(--cyan);
-      box-shadow: 0 0 0 3px rgba(34, 211, 238, .14), 0 0 18px rgba(125, 240, 255, .18);
+      box-shadow: 0 0 0 3px rgba(0, 229, 255, .14), 0 0 18px rgba(0, 229, 255, .18);
     }
     .error { min-height: 18px; margin: 0 0 8px; font-size: 12px; color: var(--danger); }
 
@@ -270,11 +279,12 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 6px;
       padding: 10px 12px calc(10px + var(--safe-b));
-      background: rgba(4, 6, 20, .82);
-      border-top: 1px solid rgba(125, 240, 255, 0.18);
+      background: rgba(0, 0, 0, .86);
+      border-top: 1px solid rgba(0, 229, 255, 0.22);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
     }
+    .nav.admin { grid-template-columns: repeat(4, 1fr); }
     .nav-btn {
       border: 0;
       background: transparent;
@@ -282,14 +292,16 @@
       padding: 10px 6px;
       border-radius: 14px;
       font-size: 12px;
-      font-weight: 680;
+      font-weight: 700;
       cursor: pointer;
       transition: background .2s ease, color .2s ease, box-shadow .2s ease;
     }
+    .nav-btn.admin-only { display: none; }
+    .nav.admin .nav-btn.admin-only { display: block; }
     .nav-btn.active {
       color: var(--text);
-      background: linear-gradient(180deg, rgba(34, 211, 238, .18), rgba(124, 58, 237, .16));
-      box-shadow: 0 0 16px rgba(125, 240, 255, .16);
+      background: rgba(0, 229, 255, .14);
+      box-shadow: 0 0 16px rgba(0, 229, 255, .16);
     }
 
     .toast {
@@ -303,13 +315,45 @@
       padding: 10px 14px;
       border-radius: 999px;
       background: var(--glass-2);
-      border: 1px solid rgba(125, 240, 255, .35);
+      border: 1px solid rgba(0, 229, 255, .35);
       backdrop-filter: blur(16px);
       font-size: 13px;
       white-space: nowrap;
+      max-width: 92vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
       transition: .28s ease;
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .gate {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 18px 16px calc(18px + var(--safe-b));
+      background: rgba(0, 0, 0, 0.72);
+    }
+    .gate.show { display: flex; }
+    .gate-card {
+      width: min(480px, 100%);
+      padding: 22px 18px 18px;
+      border-radius: 24px;
+    }
+    .gate-list { display: flex; flex-direction: column; gap: 10px; margin: 14px 0 4px; }
+    .sponsor-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 16px;
+    }
+    .sponsor-row b { display: block; font-size: 14px; }
+    .sponsor-row span { font-size: 12px; color: var(--muted); }
+    .mark { color: var(--cyan); font-weight: 800; }
   </style>
 </head>
 <body>
@@ -321,20 +365,21 @@
     </div>
   </div>
 
-  <main class="app">
+  <main class="app locked" id="appRoot">
     <header class="hero">
-      <p class="kicker">Moonlight Glow</p>
+      <p class="kicker">More than a bot</p>
       <h1>Night Royale 💸</h1>
     </header>
 
     <section class="balance-card glass" id="balanceCard">
       <p class="balance-label">Баланс, UAH</p>
       <div class="balance-row">
-        <div class="balance-value" id="balanceValue">0.00</div>
+        <div class="balance-value" id="balanceValue">—</div>
         <div class="balance-unit">₴</div>
       </div>
-      <p class="balance-hint">Завдання, друзі й виплата — виключно в гривнях.</p>
+      <p class="balance-hint">Баланс завантажується з database.json через API бота. localStorage не є джерелом правди.</p>
       <div class="admin-chip" id="adminChip">Адмін-доступ активний</div>
+      <div class="sync-chip" id="syncChip">Завантаження з бази…</div>
     </section>
 
     <div class="tabs-wrap">
@@ -348,12 +393,12 @@
         <div class="stack">
           <div class="card glass">
             <h3 class="task-title">Запрошення друга</h3>
-            <p class="task-desc">Поділись посиланням бота @nightbornbot. За кожного друга — 1.00 ₴.</p>
+            <p class="task-desc">Поділись посиланням бота @nightbornbot. За кожного нового друга — 1.00 ₴. Самореферал не працює.</p>
             <p class="ref-link" id="refLink"></p>
             <button class="btn" id="copyRefBtn" type="button">Скопіювати посилання</button>
           </div>
           <div class="stats">
-            <div class="card glass stat"><b id="refCount">0</b><span>запрошено</span></div>
+            <div class="card glass stat"><b id="refCount">—</b><span>запрошено</span></div>
             <div class="card glass stat"><b>1.00 ₴</b><span>за друга</span></div>
           </div>
         </div>
@@ -374,41 +419,94 @@
           <button class="btn" id="payoutBtn" type="button">Замовити виплату</button>
         </div>
       </section>
+
+      <section class="panel" id="panel-admin">
+        <h2 class="section-title">Адмін-панель</h2>
+        <div class="stack">
+          <div class="stats four">
+            <div class="card glass stat"><b id="admUsers">—</b><span>користувачів</span></div>
+            <div class="card glass stat"><b id="admTotal">—</b><span>сумарний баланс</span></div>
+            <div class="card glass stat"><b id="admRefs">—</b><span>рефералів</span></div>
+            <div class="card glass stat"><b id="admPays">—</b><span>заявок / ₴</span></div>
+          </div>
+          <div class="card glass">
+            <h3 class="task-title">Видати гривні</h3>
+            <p class="task-desc">Нарахування одразу пишеться в database.json. Можна видати собі або будь-якому user_id.</p>
+            <div class="field">
+              <label for="admUserId">Telegram user_id</label>
+              <input id="admUserId" inputmode="numeric" placeholder="1099861854">
+            </div>
+            <div class="field">
+              <label for="admAmount">Сума, ₴</label>
+              <input id="admAmount" inputmode="decimal" placeholder="50.00">
+            </div>
+            <p class="error" id="admError"></p>
+            <button class="btn" id="admAddBtn" type="button">Нарахувати</button>
+            <button class="btn ghost" id="admRefreshBtn" type="button">Оновити статистику</button>
+          </div>
+        </div>
+      </section>
     </div>
   </main>
 
-  <nav class="nav">
+  <nav class="nav" id="mainNav">
     <button class="nav-btn active" data-tab="tasks" type="button">Завдання</button>
     <button class="nav-btn" data-tab="refs" type="button">Реферали</button>
     <button class="nav-btn" data-tab="pay" type="button">Виплата</button>
+    <button class="nav-btn admin-only" data-tab="admin" type="button">Адмін</button>
   </nav>
+
+  <div class="gate" id="sponsorGate">
+    <div class="gate-card glass">
+      <p class="kicker">Your next level</p>
+      <h2 class="section-title">Підписка на спонсорів</h2>
+      <p class="task-desc">Головне меню, баланс і завдання відкриються лише після підписки на всі канали, зокрема @NightCapitallNc.</p>
+      <div class="gate-list" id="sponsorList"></div>
+      <button class="btn" id="checkSponsorsBtn" type="button">✅ Перевірити підписку</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
+    const qs = new URLSearchParams(window.location.search);
     const CONFIG = {
       brand: "Night Royale 💸",
       botUsername: "nightbornbot",
-      githubPages: "https://egormr111.github.io/nightbornbot/",
       channelUrl: "https://t.me/NightCapitallNc",
       channelUsername: "@NightCapitallNc",
       adminIds: [1099861854, 7641002398],
       minPayout: 1,
       refBonus: 1,
-      storageKey: "night_royale_uah_v1"
+      apiBase: (qs.get("api") || "").replace(/\/$/, "")
     };
+
+    if (!CONFIG.apiBase && location.protocol.startsWith("http") && location.hostname) {
+      CONFIG.apiBase = location.origin;
+    }
 
     const TASKS = [
       {
         id: "sub_nightcapital",
         title: "Підписка на канал",
-        desc: "Підпишись на @NightCapitallNc. Нагорода 5.00 ₴ після перевірки ботом.",
+        desc: "Підпишись на @NightCapitallNc. Нагорода 5.00 ₴ після серверної перевірки ботом.",
         reward: 5
       },
       {
         id: "react_nightcapital",
         title: "Реакція на пост",
-        desc: "Постав лайк/реакцію на останній пост @NightCapitallNc. Нагорода 2.00 ₴ після перевірки ботом.",
+        desc: "Постав реакцію на останній пост @NightCapitallNc. Нагорода 2.00 ₴ після перевірки ботом.",
         reward: 2
+      }
+    ];
+
+    const DEFAULT_SPONSORS = [
+      {
+        id: "nightcapital",
+        title: "Night Capital",
+        username: "@NightCapitallNc",
+        url: "https://t.me/NightCapitallNc",
+        subscribed: false
       }
     ];
 
@@ -417,8 +515,8 @@
       tg.ready();
       tg.expand();
       try {
-        tg.setHeaderColor("#03040c");
-        tg.setBackgroundColor("#03040c");
+        tg.setHeaderColor("#000000");
+        tg.setBackgroundColor("#000000");
       } catch (e) {}
     }
 
@@ -440,37 +538,83 @@
       ? "@" + user.username
       : [user.firstName, user.lastName].filter(Boolean).join(" ") || CONFIG.brand;
     const initial = (user.firstName || user.username || "N").charAt(0).toUpperCase();
-    const isAdmin = CONFIG.adminIds.includes(Number(user.id));
+    let isAdmin = CONFIG.adminIds.includes(Number(user.id));
 
     document.getElementById("avatar").textContent = initial;
     document.getElementById("userName").textContent = displayName;
     document.getElementById("userId").textContent = "ID: " + (user.id || "demo");
-    if (isAdmin) document.getElementById("adminChip").classList.add("show");
 
-    const loadState = () => {
-      try {
-        const raw = localStorage.getItem(CONFIG.storageKey);
-        if (raw) return JSON.parse(raw);
-      } catch (e) {}
-      return { balance: 0, done: {}, refs: 0 };
+    const showAdminUi = (on) => {
+      isAdmin = !!on;
+      document.getElementById("adminChip").classList.toggle("show", isAdmin);
+      document.getElementById("mainNav").classList.toggle("admin", isAdmin);
     };
-    const saveState = (state) => localStorage.setItem(CONFIG.storageKey, JSON.stringify(state));
-    let state = loadState();
+    showAdminUi(isAdmin);
 
-    let shownBalance = state.balance;
+    let state = {
+      user_id: user.id,
+      balance: null,
+      done: {},
+      refs: null,
+      fromServer: false,
+      sponsors_ok: false,
+      sponsors: DEFAULT_SPONSORS.slice()
+    };
+    let shownBalance = null;
     const balanceEl = document.getElementById("balanceValue");
     const balanceCard = document.getElementById("balanceCard");
-    const formatMoney = (n) => (Math.round(n * 100) / 100).toFixed(2);
-    const renderBalance = (n) => { balanceEl.textContent = formatMoney(n); };
-    renderBalance(shownBalance);
+    const syncChip = document.getElementById("syncChip");
+    const formatMoney = (n) => (Math.round(Number(n) * 100) / 100).toFixed(2);
+    const renderBalance = (n) => {
+      if (n === null || n === undefined || Number.isNaN(Number(n))) {
+        balanceEl.textContent = "—";
+        return;
+      }
+      balanceEl.textContent = formatMoney(n);
+    };
+    renderBalance(null);
+
+    const setSync = (text, kind) => {
+      syncChip.textContent = text;
+      syncChip.classList.remove("ok", "bad");
+      if (kind) syncChip.classList.add(kind);
+    };
+
+    const setLocked = (locked) => {
+      document.getElementById("appRoot").classList.toggle("locked", locked);
+      document.getElementById("sponsorGate").classList.toggle("show", locked);
+      document.getElementById("mainNav").style.display = locked ? "none" : "grid";
+    };
+    setLocked(true);
+
+    const renderSponsors = (sponsors) => {
+      const list = document.getElementById("sponsorList");
+      const rows = (sponsors && sponsors.length) ? sponsors : DEFAULT_SPONSORS;
+      list.innerHTML = rows.map((item) => {
+        return (
+          '<div class="sponsor-row glass">' +
+            "<div><b>" + item.title + "</b><span>" + item.username + "</span></div>" +
+            '<div class="mark">' + (item.subscribed ? "✅" : "❌") + "</div>" +
+          "</div>"
+        );
+      }).join("");
+      list.querySelectorAll(".sponsor-row").forEach((row, idx) => {
+        row.addEventListener("click", () => {
+          const item = rows[idx];
+          if (item && item.url) openTg(item.url);
+        });
+      });
+    };
+    renderSponsors(state.sponsors);
 
     const animateBalance = (from, to) => {
       const start = performance.now();
       const dur = 700;
+      const origin = from === null || from === undefined ? to : from;
       const tick = (now) => {
         const t = Math.min(1, (now - start) / dur);
         const eased = 1 - Math.pow(1 - t, 3);
-        shownBalance = from + (to - from) * eased;
+        shownBalance = origin + (to - origin) * eased;
         renderBalance(shownBalance);
         if (t < 1) requestAnimationFrame(tick);
         else { shownBalance = to; renderBalance(to); }
@@ -481,12 +625,30 @@
       requestAnimationFrame(tick);
     };
 
-    const addBalance = (amount) => {
-      const from = state.balance;
-      state.balance = Math.round((state.balance + amount) * 100) / 100;
-      saveState(state);
-      animateBalance(from, state.balance);
-      notify("success");
+    const applyServerState = (data, animate) => {
+      const nextBalance = Number(data.balance);
+      const prev = state.fromServer ? Number(state.balance) : null;
+      state = {
+        user_id: Number(data.user_id || user.id),
+        balance: nextBalance,
+        done: data.tasks || data.done || {},
+        refs: Number(data.ref_count != null ? data.ref_count : data.refs) || 0,
+        fromServer: true,
+        sponsors_ok: !!data.sponsors_ok,
+        sponsors: data.sponsors && data.sponsors.length ? data.sponsors : DEFAULT_SPONSORS
+      };
+      document.getElementById("refCount").textContent = String(state.refs || 0);
+      renderTasks();
+      renderSponsors(state.sponsors);
+      setLocked(!state.sponsors_ok);
+      if (state.sponsors_ok) {
+        if (animate && prev !== null && nextBalance !== prev) animateBalance(prev, nextBalance);
+        else { shownBalance = nextBalance; renderBalance(nextBalance); }
+      } else {
+        shownBalance = null;
+        renderBalance(null);
+      }
+      if (typeof data.is_admin === "boolean") showAdminUi(data.is_admin);
     };
 
     const openTg = (url) => {
@@ -499,13 +661,41 @@
       el.textContent = text;
       el.classList.add("show");
       clearTimeout(toast._t);
-      toast._t = setTimeout(() => el.classList.remove("show"), 2200);
+      toast._t = setTimeout(() => el.classList.remove("show"), 2400);
+    };
+
+    const api = async (path, options) => {
+      if (!CONFIG.apiBase) {
+        throw new Error("no_api");
+      }
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const res = await fetch(CONFIG.apiBase + path, {
+          method: (options && options.method) || "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Telegram-Init-Data": (tg && tg.initData) || ""
+          },
+          body: options && options.body ? JSON.stringify(options.body) : undefined,
+          signal: ctrl.signal
+        });
+        const data = await res.json().catch(() => ({ ok: false }));
+        if (!res.ok) {
+          const err = new Error((data && data.error) || ("http_" + res.status));
+          err.payload = data;
+          throw err;
+        }
+        return data;
+      } finally {
+        clearTimeout(timer);
+      }
     };
 
     const taskList = document.getElementById("taskList");
     const renderTasks = () => {
       taskList.innerHTML = TASKS.map((task) => {
-        const done = !!state.done[task.id];
+        const done = !!(state.done && state.done[task.id]);
         return (
           '<article class="card glass">' +
             '<div class="task-top">' +
@@ -527,29 +717,117 @@
     };
     renderTasks();
 
-    taskList.addEventListener("click", (e) => {
+    const syncFromServer = async (silent) => {
+      try {
+        const data = await api("/api/me");
+        applyServerState(data, !silent);
+        setSync("Синхронізовано з database.json", "ok");
+        return data;
+      } catch (err) {
+        renderBalance(null);
+        setLocked(true);
+        setSync("Немає зв'язку з базою бота. Потрібен HTTPS API (PUBLIC_API_URL) і відкриття Mini App з кнопки в боті.", "bad");
+        if (!silent) toast("Сервер бази недоступний");
+        return null;
+      }
+    };
+
+    const loadAdminStats = async () => {
+      if (!isAdmin) return;
+      try {
+        const data = await api("/api/admin/stats");
+        document.getElementById("admUsers").textContent = String(data.users);
+        document.getElementById("admTotal").textContent = formatMoney(data.total_balance) + " ₴";
+        document.getElementById("admRefs").textContent = String(data.total_refs);
+        document.getElementById("admPays").textContent = data.payouts + " / " + formatMoney(data.payout_sum);
+      } catch (e) {}
+    };
+
+    document.getElementById("checkSponsorsBtn").addEventListener("click", async () => {
+      haptic("medium");
+      const btn = document.getElementById("checkSponsorsBtn");
+      btn.disabled = true;
+      const old = btn.textContent;
+      btn.textContent = "Перевірка…";
+      try {
+        const data = await api("/api/sponsors/check", { method: "POST", body: {} });
+        applyServerState(data, true);
+        if (data.sponsors_ok) {
+          toast("Підписку підтверджено");
+          notify("success");
+        } else {
+          toast("Підпишись на всіх спонсорів");
+          notify("error");
+        }
+      } catch (err) {
+        try {
+          if (tg && typeof tg.sendData === "function") {
+            tg.sendData(JSON.stringify({ type: "check_sponsors" }));
+          }
+        } catch (sendErr) {}
+        openTg("https://t.me/" + CONFIG.botUsername + "?start=start");
+        toast("Бот перевіряє підписку");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = old;
+      }
+    });
+
+    taskList.addEventListener("click", async (e) => {
       const openBtn = e.target.closest("[data-open]");
       if (openBtn) {
         haptic("light");
+        const taskId = openBtn.getAttribute("data-open");
         openTg(CONFIG.channelUrl);
-        toast("Відкрий " + CONFIG.channelUsername);
+        toast(taskId === "react_nightcapital" ? "Постав реакцію на останній пост" : ("Відкрий " + CONFIG.channelUsername));
         return;
       }
       const checkBtn = e.target.closest("[data-check]");
       if (!checkBtn || checkBtn.disabled) return;
       haptic("medium");
+      const taskId = checkBtn.getAttribute("data-check");
+      checkBtn.disabled = true;
+      const oldLabel = checkBtn.textContent;
+      checkBtn.textContent = "Перевірка…";
       try {
-        if (tg && typeof tg.sendData === "function") {
-          tg.sendData(JSON.stringify({ type: "check_tasks" }));
+        const data = await api("/api/tasks/check", { method: "POST", body: { task_id: taskId } });
+        applyServerState(data, true);
+        setSync("Синхронізовано з database.json", "ok");
+        if (data.credited && data.credited.length) {
+          toast("Нараховано " + data.credited.length + " нагород");
+          notify("success");
+        } else if (data.tasks && data.tasks[taskId]) {
+          toast("Завдання вже виконано");
+        } else if (taskId === "sub_nightcapital") {
+          toast("Підписку не знайдено");
+          notify("error");
+        } else {
+          toast("Реакцію не знайдено");
+          notify("error");
         }
-      } catch (err) {}
-      openTg("https://t.me/" + CONFIG.botUsername + "?start=check_tasks");
-      toast("Бот перевіряє підписку та реакцію");
+      } catch (err) {
+        if (err && err.payload && err.payload.error === "sponsors_required") {
+          applyServerState(err.payload, false);
+          toast("Спочатку підписка на спонсорів");
+        } else {
+          try {
+            if (tg && typeof tg.sendData === "function") {
+              tg.sendData(JSON.stringify({ type: "check_tasks", task_id: taskId }));
+            }
+          } catch (sendErr) {}
+          openTg("https://t.me/" + CONFIG.botUsername + "?start=check_tasks");
+          toast("Бот перевіряє завдання");
+        }
+      } finally {
+        checkBtn.disabled = !!(state.done && state.done[taskId]);
+        if (!checkBtn.disabled) checkBtn.textContent = oldLabel;
+        else checkBtn.textContent = "Виконано";
+      }
     });
 
     const refLink = "https://t.me/" + CONFIG.botUsername + "?start=ref_" + (user.id || "guest");
     document.getElementById("refLink").textContent = refLink;
-    document.getElementById("refCount").textContent = String(state.refs || 0);
+    document.getElementById("refCount").textContent = "—";
 
     document.getElementById("copyRefBtn").addEventListener("click", async () => {
       haptic("light");
@@ -573,12 +851,17 @@
       cardInput.value = digits.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
     });
 
-    document.getElementById("payoutBtn").addEventListener("click", () => {
+    document.getElementById("payoutBtn").addEventListener("click", async () => {
       const err = document.getElementById("payError");
       err.textContent = "";
       const amount = Number(String(document.getElementById("amount").value).replace(",", "."));
       const cardDigits = cardInput.value.replace(/\D/g, "");
 
+      if (!state.fromServer || state.balance === null) {
+        err.textContent = "Спочатку дочекайся синхронізації балансу з сервера.";
+        notify("error");
+        return;
+      }
       if (!amount || amount <= 0) {
         err.textContent = "Вкажи суму виплати в гривнях.";
         notify("error");
@@ -589,7 +872,7 @@
         notify("error");
         return;
       }
-      if (amount > state.balance) {
+      if (amount > Number(state.balance)) {
         err.textContent = "Недостатньо коштів на балансі.";
         notify("error");
         return;
@@ -601,32 +884,68 @@
       }
 
       haptic("heavy");
-      const text = [
-        "Заявка на виплату Night Royale",
-        "user_id: " + (user.id || "demo"),
-        "username: " + displayName,
-        "amount: " + formatMoney(amount) + " UAH",
-        "card: " + cardInput.value.trim(),
-        "admin: " + (isAdmin ? "yes" : "no"),
-        "pages: " + CONFIG.githubPages
-      ].join("\n");
-
-      const payloadObj = {
-        type: "payout",
-        user_id: user.id || 0,
-        amount: formatMoney(amount),
-        card: cardDigits
-      };
       try {
-        if (tg && typeof tg.sendData === "function") tg.sendData(JSON.stringify(payloadObj));
-      } catch (e) {}
+        const data = await api("/api/payout", {
+          method: "POST",
+          body: { amount: formatMoney(amount), card: cardDigits }
+        });
+        if (!data.ok) {
+          err.textContent = data.message || "Не вдалося створити заявку.";
+          notify("error");
+          return;
+        }
+        applyServerState({
+          balance: data.balance,
+          tasks: state.done,
+          ref_count: state.refs,
+          is_admin: isAdmin,
+          sponsors_ok: true,
+          sponsors: state.sponsors,
+          user_id: user.id
+        }, true);
+        toast(data.message || "Заявку прийнято");
+        notify("success");
+        document.getElementById("amount").value = "";
+      } catch (e) {
+        err.textContent = "Немає зв'язку з ботом. Відкрий Mini App з кнопки в боті.";
+        notify("error");
+      }
+    });
 
-      const startPayload = ("pay_" + (user.id || "0") + "_" + Math.round(amount) + "_" + cardDigits)
-        .replace(/[^a-zA-Z0-9_]/g, "")
-        .slice(0, 64);
-      const deepLink = "https://t.me/" + CONFIG.botUsername + "?start=" + encodeURIComponent(startPayload) + "&text=" + encodeURIComponent(text);
-      openTg(deepLink);
-      toast("Заявку відкрито в боті");
+    document.getElementById("admAddBtn").addEventListener("click", async () => {
+      const admErr = document.getElementById("admError");
+      admErr.textContent = "";
+      const targetId = Number(document.getElementById("admUserId").value);
+      const amount = Number(String(document.getElementById("admAmount").value).replace(",", "."));
+      if (!targetId) {
+        admErr.textContent = "Вкажи user_id.";
+        return;
+      }
+      if (!amount) {
+        admErr.textContent = "Вкажи суму в гривнях.";
+        return;
+      }
+      try {
+        const data = await api("/api/admin/add_balance", {
+          method: "POST",
+          body: { user_id: targetId, amount: amount }
+        });
+        toast("Нараховано " + formatMoney(data.amount) + " ₴");
+        notify("success");
+        if (Number(targetId) === Number(user.id)) {
+          await syncFromServer(false);
+        }
+        await loadAdminStats();
+      } catch (e) {
+        admErr.textContent = "Не вдалося нарахувати. Перевір API і права адміна.";
+        notify("error");
+      }
+    });
+
+    document.getElementById("admRefreshBtn").addEventListener("click", async () => {
+      haptic("light");
+      await loadAdminStats();
+      toast("Статистику оновлено");
     });
 
     document.querySelectorAll(".nav-btn").forEach((btn) => {
@@ -635,7 +954,18 @@
         document.querySelectorAll(".nav-btn").forEach((b) => b.classList.toggle("active", b === btn));
         document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "panel-" + tab));
         haptic("light");
+        if (tab === "admin") loadAdminStats();
       });
+    });
+
+    document.getElementById("admUserId").value = user.id ? String(user.id) : "";
+
+    syncFromServer(true).then((data) => {
+      if (data && isAdmin) loadAdminStats();
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") syncFromServer(true);
     });
   </script>
 </body>
