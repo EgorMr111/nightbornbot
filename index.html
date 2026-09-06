@@ -839,6 +839,9 @@
           notify("success");
         } else if (data.tasks && data.tasks[taskId]) {
           toast("Завдання вже виконано");
+        } else if (data.waiting_probes && data.waiting_probes.indexOf(taskId) >= 0) {
+          toast("Постав реакцію на повідомлення в чаті з ботом");
+          notify("warning");
         } else {
           const task = (state.catalog || []).find((t) => t.id === taskId);
           toast(task && task.type === "react" ? "Реакцію не знайдено" : "Підписку не знайдено");
@@ -1027,16 +1030,19 @@
     document.getElementById("admTaskList").addEventListener("click", async (e) => {
       const btn = e.target.closest("[data-del-task]");
       if (!btn) return;
+      const taskId = btn.getAttribute("data-del-task");
+      const okConfirm = window.confirm("Видалити завдання " + taskId + " з каталогу?");
+      if (!okConfirm) return;
       try {
         const data = await api("/api/admin/tasks/delete", {
           method: "POST",
-          body: { id: btn.getAttribute("data-del-task") }
+          body: { id: taskId }
         });
         if (data.catalog) {
           state.catalog = data.catalog;
           renderTasks();
         }
-        toast("Завдання вимкнено");
+        toast("Завдання видалено");
         await syncFromServer(true);
       } catch (err) {
         toast("Не вдалося видалити");
