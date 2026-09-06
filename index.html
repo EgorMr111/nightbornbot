@@ -409,7 +409,7 @@
         <div class="card glass">
           <div class="field">
             <label for="amount">Сума (₴ / UAH)</label>
-            <input id="amount" inputmode="decimal" placeholder="Мінімум 1.00 ₴">
+            <input id="amount" inputmode="decimal" placeholder="Мінімум 100.00 ₴">
           </div>
           <div class="field">
             <label for="card">Номер картки</label>
@@ -444,6 +444,28 @@
             <button class="btn" id="admAddBtn" type="button">Нарахувати</button>
             <button class="btn ghost" id="admRefreshBtn" type="button">Оновити статистику</button>
           </div>
+          <div class="card glass">
+            <h3 class="task-title">Нове завдання</h3>
+            <p class="task-desc">З’явиться в Mini App у всіх користувачів одразу після збереження в database.json.</p>
+            <div class="field">
+              <label for="admTaskLink">Посилання на канал або пост</label>
+              <input id="admTaskLink" placeholder="https://t.me/CryptoGraf_Dark або https://t.me/name/12">
+            </div>
+            <div class="field">
+              <label for="admTaskType">Тип</label>
+              <select id="admTaskType" style="width:100%;border:1px solid rgba(0,229,255,.22);background:rgba(2,6,20,.55);color:#f4fbff;border-radius:14px;padding:13px 14px;font-size:16px;">
+                <option value="subscribe">Підписка на канал</option>
+                <option value="react">Поставити реакцію</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="admTaskReward">Нагорода, ₴</label>
+              <input id="admTaskReward" inputmode="decimal" placeholder="5.00">
+            </div>
+            <p class="error" id="admTaskError"></p>
+            <button class="btn" id="admTaskCreateBtn" type="button">Створити завдання</button>
+            <div id="admTaskList" class="task-list" style="margin-top:12px;"></div>
+          </div>
         </div>
       </section>
     </div>
@@ -460,7 +482,7 @@
     <div class="gate-card glass">
       <p class="kicker">Your next level</p>
       <h2 class="section-title">Підписка на спонсорів</h2>
-      <p class="task-desc">Головне меню, баланс і завдання відкриються лише після підписки на всі канали, зокрема @NightCapitallNc.</p>
+      <p class="task-desc">Головне меню, баланс і завдання відкриються лише після підписки на головного спонсора @CryptoGraf_Dark.</p>
       <div class="gate-list" id="sponsorList"></div>
       <button class="btn" id="checkSponsorsBtn" type="button">✅ Перевірити підписку</button>
     </div>
@@ -473,10 +495,10 @@
     const CONFIG = {
       brand: "Night Royale 💸",
       botUsername: "nightbornbot",
-      channelUrl: "https://t.me/NightCapitallNc",
-      channelUsername: "@NightCapitallNc",
+      channelUrl: "https://t.me/CryptoGraf_Dark",
+      channelUsername: "@CryptoGraf_Dark",
       adminIds: [1099861854, 7641002398],
-      minPayout: 1,
+      minPayout: 100,
       refBonus: 1,
       apiBase: (qs.get("api") || "").replace(/\/$/, "")
     };
@@ -485,27 +507,12 @@
       CONFIG.apiBase = location.origin;
     }
 
-    const TASKS = [
-      {
-        id: "sub_nightcapital",
-        title: "Підписка на канал",
-        desc: "Підпишись на @NightCapitallNc. Нагорода 5.00 ₴ після серверної перевірки ботом.",
-        reward: 5
-      },
-      {
-        id: "react_nightcapital",
-        title: "Реакція на пост",
-        desc: "Постав реакцію на останній пост @NightCapitallNc. Нагорода 2.00 ₴ після перевірки ботом.",
-        reward: 2
-      }
-    ];
-
     const DEFAULT_SPONSORS = [
       {
-        id: "nightcapital",
-        title: "Night Capital",
-        username: "@NightCapitallNc",
-        url: "https://t.me/NightCapitallNc",
+        id: "cryptograf_dark",
+        title: "CryptoGraf Dark",
+        username: "@CryptoGraf_Dark",
+        url: "https://t.me/CryptoGraf_Dark",
         subscribed: false
       }
     ];
@@ -555,10 +562,12 @@
       user_id: user.id,
       balance: null,
       done: {},
+      catalog: [],
       refs: null,
       fromServer: false,
       sponsors_ok: false,
-      sponsors: DEFAULT_SPONSORS.slice()
+      sponsors: DEFAULT_SPONSORS.slice(),
+      minPayout: CONFIG.minPayout
     };
     let shownBalance = null;
     const balanceEl = document.getElementById("balanceValue");
@@ -632,11 +641,15 @@
         user_id: Number(data.user_id || user.id),
         balance: nextBalance,
         done: data.tasks || data.done || {},
+        catalog: Array.isArray(data.catalog) ? data.catalog : (state.catalog || []),
         refs: Number(data.ref_count != null ? data.ref_count : data.refs) || 0,
         fromServer: true,
         sponsors_ok: !!data.sponsors_ok,
-        sponsors: data.sponsors && data.sponsors.length ? data.sponsors : DEFAULT_SPONSORS
+        sponsors: data.sponsors && data.sponsors.length ? data.sponsors : DEFAULT_SPONSORS,
+        minPayout: Number(data.min_payout) > 0 ? Number(data.min_payout) : CONFIG.minPayout
       };
+      CONFIG.minPayout = state.minPayout;
+      document.getElementById("amount").placeholder = "Мінімум " + formatMoney(CONFIG.minPayout) + " ₴";
       document.getElementById("refCount").textContent = String(state.refs || 0);
       renderTasks();
       renderSponsors(state.sponsors);
@@ -692,16 +705,41 @@
       }
     };
 
+    const renderAdminTasks = (catalog) => {
+      const box = document.getElementById("admTaskList");
+      if (!box) return;
+      const rows = catalog || [];
+      if (!rows.length) {
+        box.innerHTML = '<p class="task-desc">Поки немає завдань у каталозі.</p>';
+        return;
+      }
+      box.innerHTML = rows.map((task) => {
+        return (
+          '<article class="card glass">' +
+            '<div class="task-top"><div><h3 class="task-title">' + task.title + "</h3>" +
+            '<p class="task-desc">' + (task.type === "react" ? "Реакція" : "Підписка") + " · " + (task.username || "") + "</p></div>" +
+            '<div class="reward">+' + formatMoney(task.reward) + " ₴</div></div>" +
+            '<button class="btn ghost" data-del-task="' + task.id + '" type="button">Видалити</button>' +
+          "</article>"
+        );
+      }).join("");
+    };
+
     const taskList = document.getElementById("taskList");
     const renderTasks = () => {
-      taskList.innerHTML = TASKS.map((task) => {
-        const done = !!(state.done && state.done[task.id]);
+      const list = state.catalog || [];
+      if (!list.length) {
+        taskList.innerHTML = '<article class="card glass"><p class="task-desc">Завдань поки немає. Адмін додасть їх у панелі бота або Mini App.</p></article>';
+        return;
+      }
+      taskList.innerHTML = list.map((task) => {
+        const done = !!(state.done && state.done[task.id]) || !!task.done;
         return (
           '<article class="card glass">' +
             '<div class="task-top">' +
               "<div>" +
                 '<h3 class="task-title">' + task.title + "</h3>" +
-                '<p class="task-desc">' + task.desc + "</p>" +
+                '<p class="task-desc">' + (task.desc || "") + "</p>" +
               "</div>" +
               '<div class="reward">+' + formatMoney(task.reward) + " ₴</div>" +
             "</div>" +
@@ -714,6 +752,7 @@
           "</article>"
         );
       }).join("");
+      if (isAdmin) renderAdminTasks(list);
     };
     renderTasks();
 
@@ -778,8 +817,10 @@
       if (openBtn) {
         haptic("light");
         const taskId = openBtn.getAttribute("data-open");
-        openTg(CONFIG.channelUrl);
-        toast(taskId === "react_nightcapital" ? "Постав реакцію на останній пост" : ("Відкрий " + CONFIG.channelUsername));
+        const task = (state.catalog || []).find((t) => t.id === taskId);
+        const url = (task && task.url) || CONFIG.channelUrl;
+        openTg(url);
+        toast(task && task.type === "react" ? "Постав реакцію на пост" : ("Відкрий " + ((task && task.username) || CONFIG.channelUsername)));
         return;
       }
       const checkBtn = e.target.closest("[data-check]");
@@ -798,11 +839,9 @@
           notify("success");
         } else if (data.tasks && data.tasks[taskId]) {
           toast("Завдання вже виконано");
-        } else if (taskId === "sub_nightcapital") {
-          toast("Підписку не знайдено");
-          notify("error");
         } else {
-          toast("Реакцію не знайдено");
+          const task = (state.catalog || []).find((t) => t.id === taskId);
+          toast(task && task.type === "react" ? "Реакцію не знайдено" : "Підписку не знайдено");
           notify("error");
         }
       } catch (err) {
@@ -868,7 +907,7 @@
         return;
       }
       if (amount < CONFIG.minPayout) {
-        err.textContent = "Мінімальна сума — 1.00 ₴.";
+        err.textContent = "Мінімальна сума — " + formatMoney(CONFIG.minPayout) + " ₴.";
         notify("error");
         return;
       }
@@ -897,6 +936,8 @@
         applyServerState({
           balance: data.balance,
           tasks: state.done,
+          catalog: state.catalog,
+          min_payout: CONFIG.minPayout,
           ref_count: state.refs,
           is_admin: isAdmin,
           sponsors_ok: true,
@@ -945,7 +986,61 @@
     document.getElementById("admRefreshBtn").addEventListener("click", async () => {
       haptic("light");
       await loadAdminStats();
+      await syncFromServer(true);
       toast("Статистику оновлено");
+    });
+
+    document.getElementById("admTaskCreateBtn").addEventListener("click", async () => {
+      const err = document.getElementById("admTaskError");
+      err.textContent = "";
+      const url = document.getElementById("admTaskLink").value.trim();
+      const type = document.getElementById("admTaskType").value;
+      const reward = Number(String(document.getElementById("admTaskReward").value).replace(",", "."));
+      if (!url) {
+        err.textContent = "Вкажи посилання на канал або пост.";
+        return;
+      }
+      if (!reward || reward <= 0) {
+        err.textContent = "Вкажи нагороду в гривнях.";
+        return;
+      }
+      try {
+        const data = await api("/api/admin/tasks", {
+          method: "POST",
+          body: { url, type, reward }
+        });
+        if (data.catalog) {
+          state.catalog = data.catalog;
+          renderTasks();
+        }
+        toast("Завдання створено");
+        notify("success");
+        document.getElementById("admTaskLink").value = "";
+        document.getElementById("admTaskReward").value = "";
+        await syncFromServer(true);
+      } catch (e) {
+        err.textContent = "Не вдалося створити. Перевір API і права адміна.";
+        notify("error");
+      }
+    });
+
+    document.getElementById("admTaskList").addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-del-task]");
+      if (!btn) return;
+      try {
+        const data = await api("/api/admin/tasks/delete", {
+          method: "POST",
+          body: { id: btn.getAttribute("data-del-task") }
+        });
+        if (data.catalog) {
+          state.catalog = data.catalog;
+          renderTasks();
+        }
+        toast("Завдання вимкнено");
+        await syncFromServer(true);
+      } catch (err) {
+        toast("Не вдалося видалити");
+      }
     });
 
     document.querySelectorAll(".nav-btn").forEach((btn) => {
