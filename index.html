@@ -1,1776 +1,1067 @@
-"""
-Night Royale — Telegram-бот + Mini App API (aiogram 3.x).
-Серверне збереження балансу в database.json, спонсори на вході,
-перевірка завдань, реферали, адмінка.
-"""
-
-from __future__ import annotations
-
-import asyncio
-import hashlib
-import hmac
-import json
-import logging
-import os
-import re
-import time
-from contextlib import suppress
-from pathlib import Path
-from typing import Any
-from urllib.parse import parse_qsl
-
-from aiohttp import web
-from aiogram import Bot, Dispatcher, F, Router
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ChatMemberStatus, ParseMode
-from aiogram.exceptions import (
-    TelegramAPIError,
-    TelegramForbiddenError,
-    TelegramNetworkError,
-    TelegramRetryAfter,
-)
-from aiogram.filters import Command, CommandObject, CommandStart
-from aiogram.methods import GetChatMember
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    KeyboardButton,
-    MenuButtonWebApp,
-    Message,
-    MessageReactionUpdated,
-    ReplyKeyboardMarkup,
-    ReplyKeyboardRemove,
-    WebAppInfo,
-)
-
-# ---------------------------------------------------------------------------
-# Конфігурація
-# ---------------------------------------------------------------------------
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8931769386:AAHQhdnX1JcZV0_haqa4gLwMr_Bo__BppcE")
-ADMIN_IDS = {1099861854, 7641002398, 8663234665}
-CHANNEL_USERNAME = "@CryptoGraf_Dark"
-BOT_USERNAME = "nightbornbot"
-
-# Обов'язковий головний спонсор. Бот має бути адміном цього каналу.
-SPONSORS: list[dict[str, str]] = [
-    {
-        "id": "cryptograf_dark",
-        "title": "CryptoGraf Dark",
-        "username": "@CryptoGraf_Dark",
-        "url": "https://t.me/CryptoGraf_Dark",
-    },
-]
-
-GITHUB_PAGES_URL = "https://egormr111.github.io/nightbornbot/"
-PUBLIC_API_URL = os.getenv("PUBLIC_API_URL", "").rstrip("/")
-API_HOST = os.getenv("API_HOST", "0.0.0.0")
-API_PORT = int(os.getenv("API_PORT", "8080"))
-
-REF_BONUS = 1.00
-SUBSCRIBE_REWARD = 5.00
-REACT_REWARD = 2.00
-MIN_PAYOUT = 100.00
-
-TASK_SUB = "sub_nightcapital"
-TASK_REACT = "react_nightcapital"
-TASK_SUBSCRIBE = "subscribe"
-TASK_REACT_TYPE = "react"
-
-BASE_DIR = Path(__file__).resolve().parent
-DATA_FILE = BASE_DIR / "database.json"
-LEGACY_DATA_FILE = BASE_DIR / "bot_data.json"
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
-log = logging.getLogger("night_royale")
-
-router = Router()
-_lock = asyncio.Lock()
-_bot: Bot | None = None
-
-
-class AdminStates(StatesGroup):
-    waiting_add_balance = State()
-    waiting_task_link = State()
-    waiting_task_reward = State()
-
-
-# ---------------------------------------------------------------------------
-# База даних (JSON)
-# ---------------------------------------------------------------------------
-def _empty_store() -> dict[str, Any]:
-    return {
-        "users": {},
-        "payouts": [],
-        "channel": {
-            "chat_id": None,
-            "last_post_id": None,
-            "reactors": [],
-        },
-        "channel_posts": {},
-        "task_catalog": [],
-        "task_seq": 0,
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Night Royale 💸</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --cyan: #00e5ff;
+      --cyan-2: #7df0ff;
+      --black: #000000;
+      --text: #f4fbff;
+      --muted: rgba(214, 242, 255, 0.72);
+      --ok: #86efac;
+      --danger: #fda4af;
+      --glass: rgba(0, 0, 0, 0.62);
+      --glass-2: rgba(2, 8, 16, 0.82);
+      --nav-h: 78px;
+      --safe-b: env(safe-area-inset-bottom, 0px);
     }
 
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; width: 100%; max-width: 100%; overflow-x: hidden; }
 
-def _default_user() -> dict[str, Any]:
-    return {
-        "balance": 0.0,
-        "referred_by": None,
-        "ref_count": 0,
-        "referrals": [],
-        "tasks": {},
-        "username": "",
-        "first_name": "",
-        "seen_payouts": [],
-        "sponsors_ok": False,
-        "sponsors": {item["id"]: False for item in SPONSORS},
+    body {
+      font-family: Montserrat, "Segoe UI", system-ui, sans-serif;
+      color: var(--text);
+      min-height: 100dvh;
+      background-color: var(--black);
+      background-image:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.55) 40%, rgba(0, 0, 0, 0.82) 100%),
+        url("bg.jpg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
     }
 
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(640px 380px at 88% -8%, rgba(0, 229, 255, 0.16), transparent 58%),
+        radial-gradient(520px 340px at -8% 18%, rgba(0, 229, 255, 0.10), transparent 55%);
+    }
 
-def _migrate_user(raw: dict[str, Any]) -> dict[str, Any]:
-    user = _default_user()
-    user["balance"] = round(float(raw.get("balance") or 0), 2)
-    user["referred_by"] = raw.get("referred_by")
-    user["ref_count"] = int(raw.get("ref_count") or 0)
-    user["referrals"] = list(raw.get("referrals") or [])
-    user["username"] = str(raw.get("username") or "")
-    user["first_name"] = str(raw.get("first_name") or "")
-    user["seen_payouts"] = list(raw.get("seen_payouts") or [])
-    tasks = raw.get("tasks") if isinstance(raw.get("tasks"), dict) else {}
-    user["tasks"] = {str(k): bool(v) for k, v in tasks.items()}
-    if raw.get("subscribed_rewarded"):
-        user["tasks"][TASK_SUB] = True
-    if raw.get("react_rewarded"):
-        user["tasks"][TASK_REACT] = True
-    saved_sponsors = raw.get("sponsors") if isinstance(raw.get("sponsors"), dict) else {}
-    for item in SPONSORS:
-        user["sponsors"][item["id"]] = bool(saved_sponsors.get(item["id"]))
-    user["sponsors_ok"] = bool(raw.get("sponsors_ok")) and all(
-        user["sponsors"].get(item["id"]) for item in SPONSORS
-    )
-    return user
+    .app {
+      position: relative;
+      z-index: 1;
+      min-height: 100dvh;
+      padding: 18px 16px calc(var(--nav-h) + var(--safe-b) + 18px);
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .app.locked { filter: blur(7px); pointer-events: none; user-select: none; }
 
+    .badge {
+      position: fixed;
+      top: max(12px, env(safe-area-inset-top));
+      right: 12px;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: min(72vw, 280px);
+      padding: 7px 11px 7px 7px;
+      border-radius: 999px;
+      background: var(--glass-2);
+      border: 1px solid rgba(0, 229, 255, 0.45);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: 0 0 22px rgba(0, 229, 255, 0.22);
+    }
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 14px;
+      color: #041018;
+      background: linear-gradient(145deg, var(--cyan), #1488a8);
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.55);
+      flex-shrink: 0;
+    }
+    .badge-meta { min-width: 0; }
+    .badge-name {
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .badge-id {
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
-def _load() -> dict[str, Any]:
-    path = DATA_FILE if DATA_FILE.exists() else LEGACY_DATA_FILE
-    if path.exists():
-        with path.open("r", encoding="utf-8") as fh:
-            data = json.load(fh)
-    else:
-        data = _empty_store()
-    data.setdefault("users", {})
-    data.setdefault("payouts", [])
-    data.setdefault("channel", {"chat_id": None, "last_post_id": None, "reactors": []})
-    data.setdefault("channel_posts", {})
-    data.setdefault("task_catalog", [])
-    data.setdefault("task_seq", 0)
-    for uid, profile in list(data["users"].items()):
-        if isinstance(profile, dict):
-            data["users"][uid] = _migrate_user(profile)
-    return data
+    .hero { padding-right: 118px; margin-bottom: 16px; }
+    .kicker {
+      margin: 0 0 6px;
+      font-size: 11px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      text-shadow: 0 0 16px rgba(0, 229, 255, 0.55);
+    }
+    h1 {
+      margin: 0;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -.03em;
+      text-shadow: 0 0 22px rgba(0, 229, 255, 0.38);
+    }
 
+    .glass {
+      background: var(--glass);
+      border: 1px solid rgba(0, 229, 255, 0.32);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      box-shadow:
+        0 0 28px rgba(0, 229, 255, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, .08);
+    }
 
-def _save(store: dict[str, Any]) -> None:
-    DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
-    tmp = DATA_FILE.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(store, ensure_ascii=False, indent=2), encoding="utf-8")
-    tmp.replace(DATA_FILE)
+    .balance-card {
+      position: relative;
+      overflow: hidden;
+      padding: 22px 20px 18px;
+      border-radius: 24px;
+    }
+    .balance-card.pulse { animation: pulseGlow .95s ease; }
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 0 rgba(0, 229, 255, 0); }
+      40% { box-shadow: 0 0 46px rgba(0, 229, 255, .5); }
+      100% { box-shadow: 0 0 28px rgba(0, 229, 255, 0.12); }
+    }
+    .balance-label {
+      margin: 0;
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .balance-row { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; }
+    .balance-value {
+      font-size: 40px;
+      font-weight: 800;
+      letter-spacing: -.04em;
+      line-height: 1;
+      color: var(--cyan);
+      text-shadow: 0 0 22px rgba(0, 229, 255, 0.45);
+    }
+    .balance-unit { color: var(--cyan); font-weight: 700; font-size: 18px; }
+    .balance-hint { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
+    .admin-chip {
+      display: none;
+      margin-top: 12px;
+      width: fit-content;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      color: var(--cyan);
+      border: 1px solid rgba(0, 229, 255, .45);
+      background: rgba(0, 229, 255, .12);
+    }
+    .admin-chip.show { display: inline-flex; }
+    .sync-chip {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .sync-chip.ok { color: var(--ok); }
+    .sync-chip.bad { color: var(--danger); }
 
+    .tabs-wrap { margin-top: 18px; }
+    .panel { display: none; animation: fadeSlide .3s ease; }
+    .panel.active { display: block; }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: none; }
+    }
+    .section-title { margin: 0 0 12px; font-size: 15px; font-weight: 700; }
+    .task-list, .stack { display: flex; flex-direction: column; gap: 12px; }
+    .card { padding: 16px; border-radius: 20px; }
+    .task-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+    .task-title { margin: 0; font-size: 15px; font-weight: 700; }
+    .task-desc { margin: 6px 0 0; font-size: 13px; color: var(--muted); line-height: 1.4; }
+    .reward {
+      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--cyan);
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 229, 255, .4);
+      background: rgba(0, 229, 255, .12);
+      box-shadow: 0 0 12px rgba(0, 229, 255, .18);
+    }
 
-def _user(store: dict[str, Any], user_id: int) -> dict[str, Any]:
-    key = str(int(user_id))
-    if key not in store["users"]:
-        store["users"][key] = _default_user()
-    else:
-        store["users"][key] = _migrate_user(store["users"][key])
-    return store["users"][key]
+    .btn {
+      width: 100%;
+      margin-top: 14px;
+      border: 1px solid rgba(0, 229, 255, 0.55);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--cyan);
+      background: rgba(0, 0, 0, 0.55);
+      box-shadow: 0 0 22px rgba(0, 229, 255, .28);
+      cursor: pointer;
+      transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+    }
+    .btn:hover { filter: brightness(1.08); box-shadow: 0 0 28px rgba(0, 229, 255, .48); }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled {
+      cursor: default;
+      transform: none;
+      filter: none;
+      color: var(--ok);
+      background: rgba(134, 239, 172, .12);
+      border: 1px solid rgba(134, 239, 172, .3);
+      box-shadow: none;
+    }
+    .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+    .btn-row .btn { margin-top: 0; }
+    .btn.ghost {
+      color: var(--text);
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(0, 229, 255, .28);
+      box-shadow: none;
+    }
 
+    .ref-link { margin: 10px 0 0; word-break: break-all; font-size: 13px; color: var(--cyan); line-height: 1.45; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat { padding: 14px; text-align: center; }
+    .stat b { display: block; font-size: 22px; color: var(--cyan); }
+    .stat span { font-size: 11px; color: var(--muted); }
 
-def money(value: float) -> float:
-    return round(float(value) + 0.0, 2)
+    label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+    .field { margin-bottom: 12px; }
+    input {
+      width: 100%;
+      border: 1px solid rgba(0, 229, 255, .22);
+      background: rgba(0, 0, 0, .55);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 13px 14px;
+      font-size: 16px;
+      outline: none;
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+    input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(0, 229, 255, .14), 0 0 18px rgba(0, 229, 255, .18);
+    }
+    .error { min-height: 18px; margin: 0 0 8px; font-size: 12px; color: var(--danger); }
 
+    .nav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 30;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      padding: 10px 12px calc(10px + var(--safe-b));
+      background: rgba(0, 0, 0, .86);
+      border-top: 1px solid rgba(0, 229, 255, 0.22);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .nav.admin { grid-template-columns: repeat(4, 1fr); }
+    .nav-btn {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 10px 6px;
+      border-radius: 14px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s ease, color .2s ease, box-shadow .2s ease;
+    }
+    .nav-btn.admin-only { display: none; }
+    .nav.admin .nav-btn.admin-only { display: block; }
+    .nav-btn.active {
+      color: var(--text);
+      background: rgba(0, 229, 255, .14);
+      box-shadow: 0 0 16px rgba(0, 229, 255, .16);
+    }
 
-def sponsor_public_list(profile: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-    saved = (profile or {}).get("sponsors") if isinstance((profile or {}).get("sponsors"), dict) else {}
-    return [
-        {
-            "id": item["id"],
-            "title": item["title"],
-            "username": item["username"],
-            "url": item["url"],
-            "subscribed": bool(saved.get(item["id"])),
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(var(--nav-h) + var(--safe-b) + 12px);
+      transform: translateX(-50%) translateY(16px);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 50;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: var(--glass-2);
+      border: 1px solid rgba(0, 229, 255, .35);
+      backdrop-filter: blur(16px);
+      font-size: 13px;
+      white-space: nowrap;
+      max-width: 92vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: .28s ease;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .gate {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 18px 16px calc(18px + var(--safe-b));
+      background: rgba(0, 0, 0, 0.72);
+    }
+    .gate.show { display: flex; }
+    .gate-card {
+      width: min(480px, 100%);
+      padding: 22px 18px 18px;
+      border-radius: 24px;
+    }
+    .gate-list { display: flex; flex-direction: column; gap: 10px; margin: 14px 0 4px; }
+    .sponsor-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 16px;
+    }
+    .sponsor-row b { display: block; font-size: 14px; }
+    .sponsor-row span { font-size: 12px; color: var(--muted); }
+    .mark { color: var(--cyan); font-weight: 800; }
+  </style>
+</head>
+<body>
+  <div class="badge" id="profileBadge">
+    <div class="avatar" id="avatar">N</div>
+    <div class="badge-meta">
+      <div class="badge-name" id="userName">Night Royale 💸</div>
+      <div class="badge-id" id="userId">ID: —</div>
+    </div>
+  </div>
+
+  <main class="app locked" id="appRoot">
+    <header class="hero">
+      <p class="kicker">More than a bot</p>
+      <h1>Night Royale 💸</h1>
+    </header>
+
+    <section class="balance-card glass" id="balanceCard">
+      <p class="balance-label">Баланс, UAH</p>
+      <div class="balance-row">
+        <div class="balance-value" id="balanceValue">—</div>
+        <div class="balance-unit">₴</div>
+      </div>
+      <p class="balance-hint">Баланс завантажується з database.json через API бота. localStorage не є джерелом правди.</p>
+      <div class="admin-chip" id="adminChip">Адмін-доступ активний</div>
+      <div class="sync-chip" id="syncChip">Завантаження з бази…</div>
+    </section>
+
+    <div class="tabs-wrap">
+      <section class="panel active" id="panel-tasks">
+        <h2 class="section-title">Завдання</h2>
+        <div class="task-list" id="taskList"></div>
+      </section>
+
+      <section class="panel" id="panel-refs">
+        <h2 class="section-title">Реферали</h2>
+        <div class="stack">
+          <div class="card glass">
+            <h3 class="task-title">Запрошення друга</h3>
+            <p class="task-desc">Поділись посиланням бота @nightbornbot. За кожного нового друга — 1.00 ₴. Самореферал не працює.</p>
+            <p class="ref-link" id="refLink"></p>
+            <button class="btn" id="copyRefBtn" type="button">Скопіювати посилання</button>
+          </div>
+          <div class="stats">
+            <div class="card glass stat"><b id="refCount">—</b><span>запрошено</span></div>
+            <div class="card glass stat"><b>1.00 ₴</b><span>за друга</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-pay">
+        <h2 class="section-title">Виплата</h2>
+        <div class="card glass">
+          <div class="field">
+            <label for="amount">Сума (₴ / UAH)</label>
+            <input id="amount" inputmode="decimal" placeholder="Мінімум 100.00 ₴">
+          </div>
+          <div class="field">
+            <label for="card">Номер картки</label>
+            <input id="card" inputmode="numeric" maxlength="23" placeholder="XXXX XXXX XXXX XXXX" autocomplete="cc-number">
+          </div>
+          <p class="error" id="payError"></p>
+          <button class="btn" id="payoutBtn" type="button">Замовити виплату</button>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-admin">
+        <h2 class="section-title">Адмін-панель</h2>
+        <div class="stack">
+          <div class="stats four">
+            <div class="card glass stat"><b id="admUsers">—</b><span>користувачів</span></div>
+            <div class="card glass stat"><b id="admTotal">—</b><span>сумарний баланс</span></div>
+            <div class="card glass stat"><b id="admRefs">—</b><span>рефералів</span></div>
+            <div class="card glass stat"><b id="admPays">—</b><span>заявок / ₴</span></div>
+          </div>
+          <div class="card glass">
+            <h3 class="task-title">Видати гривні</h3>
+            <p class="task-desc">Нарахування одразу пишеться в database.json. Можна видати собі або будь-якому user_id.</p>
+            <div class="field">
+              <label for="admUserId">Telegram user_id</label>
+              <input id="admUserId" inputmode="numeric" placeholder="1099861854">
+            </div>
+            <div class="field">
+              <label for="admAmount">Сума, ₴</label>
+              <input id="admAmount" inputmode="decimal" placeholder="50.00">
+            </div>
+            <p class="error" id="admError"></p>
+            <button class="btn" id="admAddBtn" type="button">Нарахувати</button>
+            <button class="btn ghost" id="admRefreshBtn" type="button">Оновити статистику</button>
+          </div>
+          <div class="card glass">
+            <h3 class="task-title">Нове завдання</h3>
+            <p class="task-desc">З’явиться в Mini App у всіх користувачів одразу після збереження в database.json.</p>
+            <div class="field">
+              <label for="admTaskLink">Посилання на канал або пост</label>
+              <input id="admTaskLink" placeholder="https://t.me/CryptoGraf_Dark або https://t.me/name/12">
+            </div>
+            <div class="field">
+              <label for="admTaskType">Тип</label>
+              <select id="admTaskType" style="width:100%;border:1px solid rgba(0,229,255,.22);background:rgba(2,6,20,.55);color:#f4fbff;border-radius:14px;padding:13px 14px;font-size:16px;">
+                <option value="subscribe">Підписка на канал</option>
+                <option value="react">Поставити реакцію</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="admTaskReward">Нагорода, ₴</label>
+              <input id="admTaskReward" inputmode="decimal" placeholder="5.00">
+            </div>
+            <p class="error" id="admTaskError"></p>
+            <button class="btn" id="admTaskCreateBtn" type="button">Створити завдання</button>
+            <div id="admTaskList" class="task-list" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <nav class="nav" id="mainNav">
+    <button class="nav-btn active" data-tab="tasks" type="button">Завдання</button>
+    <button class="nav-btn" data-tab="refs" type="button">Реферали</button>
+    <button class="nav-btn" data-tab="pay" type="button">Виплата</button>
+    <button class="nav-btn admin-only" data-tab="admin" type="button">Адмін</button>
+  </nav>
+
+  <div class="gate" id="sponsorGate">
+    <div class="gate-card glass">
+      <p class="kicker">Your next level</p>
+      <h2 class="section-title">Підписка на спонсорів</h2>
+      <p class="task-desc">Головне меню, баланс і завдання відкриються лише після підписки на головного спонсора @CryptoGraf_Dark.</p>
+      <div class="gate-list" id="sponsorList"></div>
+      <button class="btn" id="checkSponsorsBtn" type="button">✅ Перевірити підписку</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const qs = new URLSearchParams(window.location.search);
+    const CONFIG = {
+      brand: "Night Royale 💸",
+      botUsername: "nightbornbot",
+      channelUrl: "https://t.me/CryptoGraf_Dark",
+      channelUsername: "@CryptoGraf_Dark",
+      adminIds: [1099861854, 7641002398],
+      minPayout: 100,
+      refBonus: 1,
+      apiBase: (qs.get("api") || "").replace(/\/$/, "")
+    };
+
+    if (!CONFIG.apiBase && location.protocol.startsWith("http") && location.hostname) {
+      CONFIG.apiBase = location.origin;
+    }
+
+    const DEFAULT_SPONSORS = [
+      {
+        id: "cryptograf_dark",
+        title: "CryptoGraf Dark",
+        username: "@CryptoGraf_Dark",
+        url: "https://t.me/CryptoGraf_Dark",
+        subscribed: false
+      }
+    ];
+
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      try {
+        tg.setHeaderColor("#000000");
+        tg.setBackgroundColor("#000000");
+      } catch (e) {}
+    }
+
+    const haptic = (type) => {
+      try { tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred(type || "light"); } catch (e) {}
+    };
+    const notify = (kind) => {
+      try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred(kind); } catch (e) {}
+    };
+
+    const tgUser = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) || {};
+    const user = {
+      id: tgUser.id || 0,
+      firstName: tgUser.first_name || "Guest",
+      lastName: tgUser.last_name || "",
+      username: tgUser.username || ""
+    };
+    const displayName = user.username
+      ? "@" + user.username
+      : [user.firstName, user.lastName].filter(Boolean).join(" ") || CONFIG.brand;
+    const initial = (user.firstName || user.username || "N").charAt(0).toUpperCase();
+    let isAdmin = CONFIG.adminIds.includes(Number(user.id));
+
+    document.getElementById("avatar").textContent = initial;
+    document.getElementById("userName").textContent = displayName;
+    document.getElementById("userId").textContent = "ID: " + (user.id || "demo");
+
+    const showAdminUi = (on) => {
+      isAdmin = !!on;
+      document.getElementById("adminChip").classList.toggle("show", isAdmin);
+      document.getElementById("mainNav").classList.toggle("admin", isAdmin);
+    };
+    showAdminUi(isAdmin);
+
+    let state = {
+      user_id: user.id,
+      balance: null,
+      done: {},
+      catalog: [],
+      refs: null,
+      fromServer: false,
+      sponsors_ok: false,
+      sponsors: DEFAULT_SPONSORS.slice(),
+      minPayout: CONFIG.minPayout
+    };
+    let shownBalance = null;
+    const balanceEl = document.getElementById("balanceValue");
+    const balanceCard = document.getElementById("balanceCard");
+    const syncChip = document.getElementById("syncChip");
+    const formatMoney = (n) => (Math.round(Number(n) * 100) / 100).toFixed(2);
+    const renderBalance = (n) => {
+      if (n === null || n === undefined || Number.isNaN(Number(n))) {
+        balanceEl.textContent = "—";
+        return;
+      }
+      balanceEl.textContent = formatMoney(n);
+    };
+    renderBalance(null);
+
+    const setSync = (text, kind) => {
+      syncChip.textContent = text;
+      syncChip.classList.remove("ok", "bad");
+      if (kind) syncChip.classList.add(kind);
+    };
+
+    const setLocked = (locked) => {
+      document.getElementById("appRoot").classList.toggle("locked", locked);
+      document.getElementById("sponsorGate").classList.toggle("show", locked);
+      document.getElementById("mainNav").style.display = locked ? "none" : "grid";
+    };
+    setLocked(true);
+
+    const renderSponsors = (sponsors) => {
+      const list = document.getElementById("sponsorList");
+      const rows = (sponsors && sponsors.length) ? sponsors : DEFAULT_SPONSORS;
+      list.innerHTML = rows.map((item) => {
+        return (
+          '<div class="sponsor-row glass">' +
+            "<div><b>" + item.title + "</b><span>" + item.username + "</span></div>" +
+            '<div class="mark">' + (item.subscribed ? "✅" : "❌") + "</div>" +
+          "</div>"
+        );
+      }).join("");
+      list.querySelectorAll(".sponsor-row").forEach((row, idx) => {
+        row.addEventListener("click", () => {
+          const item = rows[idx];
+          if (item && item.url) openTg(item.url);
+        });
+      });
+    };
+    renderSponsors(state.sponsors);
+
+    const animateBalance = (from, to) => {
+      const start = performance.now();
+      const dur = 700;
+      const origin = from === null || from === undefined ? to : from;
+      const tick = (now) => {
+        const t = Math.min(1, (now - start) / dur);
+        const eased = 1 - Math.pow(1 - t, 3);
+        shownBalance = origin + (to - origin) * eased;
+        renderBalance(shownBalance);
+        if (t < 1) requestAnimationFrame(tick);
+        else { shownBalance = to; renderBalance(to); }
+      };
+      balanceCard.classList.remove("pulse");
+      void balanceCard.offsetWidth;
+      balanceCard.classList.add("pulse");
+      requestAnimationFrame(tick);
+    };
+
+    const applyServerState = (data, animate) => {
+      const nextBalance = Number(data.balance);
+      const prev = state.fromServer ? Number(state.balance) : null;
+      state = {
+        user_id: Number(data.user_id || user.id),
+        balance: nextBalance,
+        done: data.tasks || data.done || {},
+        catalog: Array.isArray(data.catalog) ? data.catalog : (state.catalog || []),
+        refs: Number(data.ref_count != null ? data.ref_count : data.refs) || 0,
+        fromServer: true,
+        sponsors_ok: !!data.sponsors_ok,
+        sponsors: data.sponsors && data.sponsors.length ? data.sponsors : DEFAULT_SPONSORS,
+        minPayout: Number(data.min_payout) > 0 ? Number(data.min_payout) : CONFIG.minPayout
+      };
+      CONFIG.minPayout = state.minPayout;
+      document.getElementById("amount").placeholder = "Мінімум " + formatMoney(CONFIG.minPayout) + " ₴";
+      document.getElementById("refCount").textContent = String(state.refs || 0);
+      renderTasks();
+      renderSponsors(state.sponsors);
+      setLocked(!state.sponsors_ok);
+      if (state.sponsors_ok) {
+        if (animate && prev !== null && nextBalance !== prev) animateBalance(prev, nextBalance);
+        else { shownBalance = nextBalance; renderBalance(nextBalance); }
+      } else {
+        shownBalance = null;
+        renderBalance(null);
+      }
+      if (typeof data.is_admin === "boolean") showAdminUi(data.is_admin);
+    };
+
+    const openTg = (url) => {
+      if (tg && tg.openTelegramLink) tg.openTelegramLink(url);
+      else window.open(url, "_blank");
+    };
+
+    const toast = (text) => {
+      const el = document.getElementById("toast");
+      el.textContent = text;
+      el.classList.add("show");
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => el.classList.remove("show"), 2400);
+    };
+
+    const api = async (path, options) => {
+      if (!CONFIG.apiBase) {
+        throw new Error("no_api");
+      }
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const res = await fetch(CONFIG.apiBase + path, {
+          method: (options && options.method) || "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Telegram-Init-Data": (tg && tg.initData) || ""
+          },
+          body: options && options.body ? JSON.stringify(options.body) : undefined,
+          signal: ctrl.signal
+        });
+        const data = await res.json().catch(() => ({ ok: false }));
+        if (!res.ok) {
+          const err = new Error((data && data.error) || ("http_" + res.status));
+          err.payload = data;
+          throw err;
         }
-        for item in SPONSORS
-    ]
+        return data;
+      } finally {
+        clearTimeout(timer);
+      }
+    };
 
+    const renderAdminTasks = (catalog) => {
+      const box = document.getElementById("admTaskList");
+      if (!box) return;
+      const rows = catalog || [];
+      if (!rows.length) {
+        box.innerHTML = '<p class="task-desc">Поки немає завдань у каталозі.</p>';
+        return;
+      }
+      box.innerHTML = rows.map((task) => {
+        return (
+          '<article class="card glass">' +
+            '<div class="task-top"><div><h3 class="task-title">' + task.title + "</h3>" +
+            '<p class="task-desc">' + (task.type === "react" ? "Реакція" : "Підписка") + " · " + (task.username || "") + "</p></div>" +
+            '<div class="reward">+' + formatMoney(task.reward) + " ₴</div></div>" +
+            '<button class="btn ghost" data-del-task="' + task.id + '" type="button">Видалити</button>' +
+          "</article>"
+        );
+      }).join("");
+    };
 
-def catalog_public(profile: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-    store = _load()
-    done = (profile or {}).get("tasks") if isinstance((profile or {}).get("tasks"), dict) else {}
-    items = []
-    for task in store.get("task_catalog") or []:
-        if not task.get("active", True):
-            continue
-        kind = str(task.get("type") or TASK_SUBSCRIBE)
-        reward = money(task.get("reward") or 0)
-        username = str(task.get("username") or "")
-        url = str(task.get("url") or "")
-        title = str(task.get("title") or ("Підписка на канал" if kind == TASK_SUBSCRIBE else "Поставити реакцію"))
-        if kind == TASK_SUBSCRIBE:
-            desc = f"Підпишись на {username}. Нагорода {reward:.2f} ₴ після перевірки ботом."
-        else:
-            desc = f"Постав реакцію на пост {url or username}. Нагорода {reward:.2f} ₴ після перевірки ботом."
-        items.append(
-            {
-                "id": str(task.get("id")),
-                "type": kind,
-                "title": title,
-                "desc": desc,
-                "url": url,
-                "username": username,
-                "post_id": task.get("post_id"),
-                "reward": reward,
-                "done": bool(done.get(str(task.get("id")))),
+    const taskList = document.getElementById("taskList");
+    const renderTasks = () => {
+      const list = state.catalog || [];
+      if (!list.length) {
+        taskList.innerHTML = '<article class="card glass"><p class="task-desc">Завдань поки немає. Адмін додасть їх у панелі бота або Mini App.</p></article>';
+        return;
+      }
+      taskList.innerHTML = list.map((task) => {
+        const done = !!(state.done && state.done[task.id]) || !!task.done;
+        return (
+          '<article class="card glass">' +
+            '<div class="task-top">' +
+              "<div>" +
+                '<h3 class="task-title">' + task.title + "</h3>" +
+                '<p class="task-desc">' + (task.desc || "") + "</p>" +
+              "</div>" +
+              '<div class="reward">+' + formatMoney(task.reward) + " ₴</div>" +
+            "</div>" +
+            '<div class="btn-row">' +
+              '<button class="btn ghost" data-open="' + task.id + '" type="button">Відкрити</button>' +
+              '<button class="btn" data-check="' + task.id + '"' + (done ? " disabled" : "") + ' type="button">' +
+                (done ? "Виконано" : "Перевірити") +
+              "</button>" +
+            "</div>" +
+          "</article>"
+        );
+      }).join("");
+      if (isAdmin) renderAdminTasks(list);
+    };
+    renderTasks();
+
+    const syncFromServer = async (silent) => {
+      try {
+        const data = await api("/api/me");
+        applyServerState(data, !silent);
+        setSync("Синхронізовано з database.json", "ok");
+        return data;
+      } catch (err) {
+        renderBalance(null);
+        setLocked(true);
+        setSync("Немає зв'язку з базою бота. Потрібен HTTPS API (PUBLIC_API_URL) і відкриття Mini App з кнопки в боті.", "bad");
+        if (!silent) toast("Сервер бази недоступний");
+        return null;
+      }
+    };
+
+    const loadAdminStats = async () => {
+      if (!isAdmin) return;
+      try {
+        const data = await api("/api/admin/stats");
+        document.getElementById("admUsers").textContent = String(data.users);
+        document.getElementById("admTotal").textContent = formatMoney(data.total_balance) + " ₴";
+        document.getElementById("admRefs").textContent = String(data.total_refs);
+        document.getElementById("admPays").textContent = data.payouts + " / " + formatMoney(data.payout_sum);
+      } catch (e) {}
+    };
+
+    document.getElementById("checkSponsorsBtn").addEventListener("click", async () => {
+      haptic("medium");
+      const btn = document.getElementById("checkSponsorsBtn");
+      btn.disabled = true;
+      const old = btn.textContent;
+      btn.textContent = "Перевірка…";
+      try {
+        const data = await api("/api/sponsors/check", { method: "POST", body: {} });
+        applyServerState(data, true);
+        if (data.sponsors_ok) {
+          toast("Підписку підтверджено");
+          notify("success");
+        } else {
+          toast("Підпишись на всіх спонсорів");
+          notify("error");
+        }
+      } catch (err) {
+        try {
+          if (tg && typeof tg.sendData === "function") {
+            tg.sendData(JSON.stringify({ type: "check_sponsors" }));
+          }
+        } catch (sendErr) {}
+        openTg("https://t.me/" + CONFIG.botUsername + "?start=start");
+        toast("Бот перевіряє підписку");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = old;
+      }
+    });
+
+    taskList.addEventListener("click", async (e) => {
+      const openBtn = e.target.closest("[data-open]");
+      if (openBtn) {
+        haptic("light");
+        const taskId = openBtn.getAttribute("data-open");
+        const task = (state.catalog || []).find((t) => t.id === taskId);
+        const url = (task && task.url) || CONFIG.channelUrl;
+        openTg(url);
+        toast(task && task.type === "react" ? "Постав реакцію на пост" : ("Відкрий " + ((task && task.username) || CONFIG.channelUsername)));
+        return;
+      }
+      const checkBtn = e.target.closest("[data-check]");
+      if (!checkBtn || checkBtn.disabled) return;
+      haptic("medium");
+      const taskId = checkBtn.getAttribute("data-check");
+      checkBtn.disabled = true;
+      const oldLabel = checkBtn.textContent;
+      checkBtn.textContent = "Перевірка…";
+      try {
+        const data = await api("/api/tasks/check", { method: "POST", body: { task_id: taskId } });
+        applyServerState(data, true);
+        setSync("Синхронізовано з database.json", "ok");
+        if (data.credited && data.credited.length) {
+          toast("Нараховано " + data.credited.length + " нагород");
+          notify("success");
+        } else if (data.tasks && data.tasks[taskId]) {
+          toast("Завдання вже виконано");
+        } else {
+          const task = (state.catalog || []).find((t) => t.id === taskId);
+          toast(task && task.type === "react" ? "Реакцію не знайдено" : "Підписку не знайдено");
+          notify("error");
+        }
+      } catch (err) {
+        if (err && err.payload && err.payload.error === "sponsors_required") {
+          applyServerState(err.payload, false);
+          toast("Спочатку підписка на спонсорів");
+        } else {
+          try {
+            if (tg && typeof tg.sendData === "function") {
+              tg.sendData(JSON.stringify({ type: "check_tasks", task_id: taskId }));
             }
-        )
-    return items
-
-
-def public_profile(user_id: int, profile: dict[str, Any], *, is_admin: bool) -> dict[str, Any]:
-    """Єдине джерело правди: баланс завжди з database.json, без обнулення."""
-    unlocked = bool(profile.get("sponsors_ok"))
-    return {
-        "ok": True,
-        "user_id": int(user_id),
-        "balance": money(profile["balance"]),
-        "ref_count": int(profile["ref_count"]),
-        "tasks": dict(profile.get("tasks") or {}),
-        "catalog": catalog_public(profile),
-        "is_admin": is_admin,
-        "ref_bonus": REF_BONUS,
-        "min_payout": MIN_PAYOUT,
-        "sponsors_ok": unlocked,
-        "is_subscribed": unlocked,
-        "sponsors": sponsor_public_list(profile),
-        "locked": not unlocked,
-    }
-
-
-# ---------------------------------------------------------------------------
-# WebApp URL / клавіатури
-# ---------------------------------------------------------------------------
-def mini_app_url() -> str:
-    if PUBLIC_API_URL:
-        return PUBLIC_API_URL.rstrip("/") + "/"
-    return GITHUB_PAGES_URL
-
-
-def webapp_info() -> WebAppInfo:
-    return WebAppInfo(url=mini_app_url())
-
-
-def main_reply_kb() -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="🚀 Відкрити Mini App", web_app=webapp_info())],
-            [KeyboardButton(text="🌙 Перевірити завдання"), KeyboardButton(text="💳 Баланс")],
-        ],
-        resize_keyboard=True,
-    )
-
-
-def start_inline_kb(user_id: int) -> InlineKeyboardMarkup:
-    rows = [
-        [InlineKeyboardButton(text="🚀 Відкрити Mini App", web_app=webapp_info())],
-        [InlineKeyboardButton(text="Перевірити завдання", callback_data="check_tasks")],
-    ]
-    if user_id in ADMIN_IDS:
-        rows.append([InlineKeyboardButton(text="🛡 Адмін-панель", callback_data="admin_panel")])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
-def sponsors_kb() -> InlineKeyboardMarkup:
-    rows: list[list[InlineKeyboardButton]] = []
-    for item in SPONSORS:
-        rows.append(
-            [InlineKeyboardButton(text=f"📢 {item['title']}", url=item["url"])]
-        )
-    rows.append(
-        [InlineKeyboardButton(text="✅ Перевірити підписку", callback_data="check_sponsors")]
-    )
-    return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
-def admin_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")],
-            [InlineKeyboardButton(text="➕ Нове завдання", callback_data="admin_task_new")],
-            [InlineKeyboardButton(text="📋 Список завдань", callback_data="admin_task_list")],
-            [InlineKeyboardButton(text="➕ Видати гривні", callback_data="admin_add")],
-            [InlineKeyboardButton(text="🚀 Mini App", web_app=webapp_info())],
-        ]
-    )
-
-
-def task_type_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="📢 Підписка на канал", callback_data="admin_task_type:subscribe")],
-            [InlineKeyboardButton(text="❤️ Поставити реакцію", callback_data="admin_task_type:react")],
-            [InlineKeyboardButton(text="✖ Скасувати", callback_data="admin_panel")],
-        ]
-    )
-
-
-WELCOME_TEXT = (
-    "💸 <b>Night Royale</b>\n"
-    "MORE THAN A BOT · YOUR NEXT LEVEL\n\n"
-    "Баланс, завдання й реферали зберігаються на сервері — "
-    "гроші не зникають при перезаході в Mini App.\n\n"
-    "Головний спонсор: {channel}\n"
-    "Реферальне посилання:\n"
-    "<code>https://t.me/{bot}?start=ref_{uid}</code>\n\n"
-    "За друга: <b>+{ref:.2f} ₴</b> · мінімальна виплата: <b>{minp:.2f} ₴</b>"
-)
-
-SPONSOR_TEXT = (
-    "🌙 <b>Night Royale</b>\n"
-    "MORE THAN A BOT\n\n"
-    "Щоб відкрити меню, баланс і завдання, підпишись на головного спонсора "
-    "<b>@CryptoGraf_Dark</b> і натисни «✅ Перевірити підписку».\n\n"
-    "{list}"
-)
-
-
-def is_admin(user_id: int) -> bool:
-    return int(user_id) in ADMIN_IDS
-
-
-def format_sponsor_lines(status: dict[str, bool] | None = None) -> str:
-    lines = []
-    for item in SPONSORS:
-        ok = bool((status or {}).get(item["id"]))
-        mark = "✅" if ok else "❌"
-        lines.append(f"{mark} {item['title']} — {item['username']}")
-    return "\n".join(lines)
-
-
-# ---------------------------------------------------------------------------
-# Перевірка підписки / реакцій
-# ---------------------------------------------------------------------------
-_member_cache: dict[tuple[int, str], tuple[float, bool]] = {}
-MEMBER_CACHE_OK_TTL = 45.0
-MEMBER_CACHE_FAIL_TTL = 8.0
-GET_CHAT_MEMBER_TIMEOUT = 4.0
-SPONSOR_CHECK_BUDGET = 5.0
-
-_OK_MEMBER_STATUSES = {
-    ChatMemberStatus.MEMBER,
-    ChatMemberStatus.ADMINISTRATOR,
-    ChatMemberStatus.CREATOR,
-    "member",
-    "administrator",
-    "creator",
-}
-_FAIL_MEMBER_STATUSES = {
-    ChatMemberStatus.LEFT,
-    ChatMemberStatus.KICKED,
-    "left",
-    "kicked",
-}
-
-
-def _status_value(status: Any) -> str:
-    if isinstance(status, ChatMemberStatus):
-        return str(status.value)
-    return str(status or "").lower()
-
-
-def member_is_subscribed(member: Any) -> bool:
-    """member / creator / administrator — ок; left / kicked — ні; restricted — лише якщо is_member."""
-    status = getattr(member, "status", None)
-    if status in _OK_MEMBER_STATUSES or _status_value(status) in _OK_MEMBER_STATUSES:
-        return True
-    if status in _FAIL_MEMBER_STATUSES or _status_value(status) in _FAIL_MEMBER_STATUSES:
-        return False
-    if status == ChatMemberStatus.RESTRICTED or _status_value(status) == "restricted":
-        return bool(getattr(member, "is_member", False))
-    return False
-
-
-async def is_channel_member(
-    bot: Bot,
-    user_id: int,
-    chat: str | None = None,
-    *,
-    use_cache: bool = True,
-) -> bool:
-    target = chat or CHANNEL_USERNAME
-    cache_key = (int(user_id), str(target).lower())
-    now = time.monotonic()
-    cached = _member_cache.get(cache_key)
-    if use_cache and cached:
-        ts, ok = cached
-        ttl = MEMBER_CACHE_OK_TTL if ok else MEMBER_CACHE_FAIL_TTL
-        if now - ts < ttl:
-            return ok
-
-    try:
-        member = await asyncio.wait_for(
-            bot(
-                GetChatMember(chat_id=target, user_id=int(user_id)),
-                request_timeout=GET_CHAT_MEMBER_TIMEOUT,
-            ),
-            timeout=GET_CHAT_MEMBER_TIMEOUT + 0.5,
-        )
-    except asyncio.TimeoutError:
-        log.warning("get_chat_member timeout for %s in %s", user_id, target)
-        return False
-    except TelegramRetryAfter as exc:
-        log.warning(
-            "get_chat_member flood-wait %ss for %s in %s — skip wait",
-            getattr(exc, "retry_after", "?"),
-            user_id,
-            target,
-        )
-        return False
-    except TelegramForbiddenError as exc:
-        log.warning("get_chat_member forbidden for %s in %s: %s", user_id, target, exc)
-        return False
-    except TelegramNetworkError as exc:
-        log.warning("get_chat_member network for %s in %s: %s", user_id, target, exc)
-        return False
-    except TelegramAPIError as exc:
-        log.warning("get_chat_member failed for %s in %s: %s", user_id, target, exc)
-        return False
-
-    ok = member_is_subscribed(member)
-    _member_cache[cache_key] = (now, ok)
-    return ok
-
-
-async def check_sponsors_for_user(
-    bot: Bot,
-    user_id: int,
-    *,
-    use_cache: bool = True,
-) -> dict[str, Any]:
-    async def _one(item: dict[str, str]) -> tuple[str, bool]:
-        ok = await is_channel_member(
-            bot, user_id, item["username"], use_cache=use_cache
-        )
-        return item["id"], bool(ok)
-
-    try:
-        checks = await asyncio.wait_for(
-            asyncio.gather(*[_one(item) for item in SPONSORS], return_exceptions=True),
-            timeout=SPONSOR_CHECK_BUDGET,
-        )
-    except asyncio.TimeoutError:
-        log.warning("sponsor check budget exceeded for %s", user_id)
-        checks = [False] * len(SPONSORS)
-
-    mapping: dict[str, bool] = {}
-    for item, result in zip(SPONSORS, checks):
-        if isinstance(result, tuple) and len(result) == 2:
-            mapping[item["id"]] = bool(result[1])
-        elif isinstance(result, Exception):
-            mapping[item["id"]] = False
-        else:
-            mapping[item["id"]] = bool(result)
-    all_ok = all(mapping.values()) if SPONSORS else True
-
-    async with _lock:
-        store = _load()
-        profile = _user(store, user_id)
-        profile["sponsors"] = mapping
-        profile["sponsors_ok"] = all_ok
-        _save(store)
-        snapshot = dict(profile)
-
-    return {
-        "ok": True,
-        "sponsors_ok": all_ok,
-        "sponsors": sponsor_public_list(snapshot),
-        "missing": [item["username"] for item in SPONSORS if not mapping[item["id"]]],
-        "balance": money(snapshot["balance"]),
-        "profile": snapshot,
-    }
-
-
-async def require_sponsors(bot: Bot, user_id: int) -> dict[str, Any] | None:
-    result = await check_sponsors_for_user(bot, user_id)
-    if result["sponsors_ok"]:
-        return None
-    return result
-
-
-async def send_sponsor_gate(
-    target: Message,
-    result: dict[str, Any] | None = None,
-) -> None:
-    status = {item["id"]: False for item in SPONSORS}
-    if result and result.get("sponsors"):
-        status = {row["id"]: bool(row.get("subscribed")) for row in result["sponsors"]}
-    text = SPONSOR_TEXT.format(list=format_sponsor_lines(status))
-    await target.answer(text, reply_markup=sponsors_kb())
-    await target.answer(
-        "Доступ заблоковано, доки не підтверджено підписку на всіх спонсорів.",
-        reply_markup=ReplyKeyboardRemove(),
-    )
-
-
-async def open_app(message: Message, extra_note: str = "") -> None:
-    user = message.from_user
-    if not user:
-        return
-    text = WELCOME_TEXT.format(
-        channel=CHANNEL_USERNAME,
-        bot=BOT_USERNAME,
-        uid=user.id,
-        ref=REF_BONUS,
-        minp=MIN_PAYOUT,
-    )
-    await message.answer(text + extra_note, reply_markup=start_inline_kb(user.id))
-    await message.answer("Швидкий доступ завжди під рукою ↓", reply_markup=main_reply_kb())
-
-
-def _chat_key(username: str | None) -> str:
-    return (username or "").lower().lstrip("@")
-
-
-def chat_bucket(store: dict[str, Any], username: str | None) -> dict[str, Any]:
-    store.setdefault("channel_posts", {})
-    key = _chat_key(username)
-    if not key:
-        return {}
-    return store["channel_posts"].setdefault(
-        key, {"last_post_id": None, "chat_id": None, "posts": {}}
-    )
-
-
-TG_LINK_RE = re.compile(
-    r"(?:https?://)?(?:t\.me|telegram\.me)/([A-Za-z0-9_]+)/?(\d+)?",
-    re.IGNORECASE,
-)
-
-
-def parse_telegram_link(raw: str) -> dict[str, Any] | None:
-    text = (raw or "").strip()
-    if not text:
-        return None
-    if text.startswith("@"):
-        uname = text[1:].split()[0].strip("/")
-        if not uname:
-            return None
-        return {
-            "username": "@" + uname,
-            "url": f"https://t.me/{uname}",
-            "post_id": None,
+          } catch (sendErr) {}
+          openTg("https://t.me/" + CONFIG.botUsername + "?start=check_tasks");
+          toast("Бот перевіряє завдання");
         }
-    match = TG_LINK_RE.search(text)
-    if not match:
-        return None
-    uname = match.group(1)
-    if uname.lower() in {"joinchat", "c", "share", "addstickers", "s"}:
-        return None
-    post = match.group(2)
-    return {
-        "username": "@" + uname,
-        "url": f"https://t.me/{uname}" + (f"/{post}" if post else ""),
-        "post_id": int(post) if post else None,
-    }
+      } finally {
+        checkBtn.disabled = !!(state.done && state.done[taskId]);
+        if (!checkBtn.disabled) checkBtn.textContent = oldLabel;
+        else checkBtn.textContent = "Виконано";
+      }
+    });
 
+    const refLink = "https://t.me/" + CONFIG.botUsername + "?start=ref_" + (user.id || "guest");
+    document.getElementById("refLink").textContent = refLink;
+    document.getElementById("refCount").textContent = "—";
 
-def active_catalog(store: dict[str, Any]) -> list[dict[str, Any]]:
-    return [t for t in (store.get("task_catalog") or []) if t.get("active", True)]
+    document.getElementById("copyRefBtn").addEventListener("click", async () => {
+      haptic("light");
+      try {
+        await navigator.clipboard.writeText(refLink);
+      } catch (e) {
+        const ta = document.createElement("textarea");
+        ta.value = refLink;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+      }
+      toast("Посилання скопійовано");
+      notify("success");
+    });
 
+    const cardInput = document.getElementById("card");
+    cardInput.addEventListener("input", () => {
+      const digits = cardInput.value.replace(/\D/g, "").slice(0, 19);
+      cardInput.value = digits.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
+    });
 
-async def user_reacted_to_task(user_id: int, task: dict[str, Any]) -> bool:
-    async with _lock:
-        store = _load()
-        bucket = chat_bucket(store, str(task.get("username") or ""))
-        post_id = task.get("post_id") or bucket.get("last_post_id")
-        if not post_id:
-            return False
-        reactors = [str(x) for x in (bucket.get("posts") or {}).get(str(post_id), [])]
-        return str(user_id) in reactors
+    document.getElementById("payoutBtn").addEventListener("click", async () => {
+      const err = document.getElementById("payError");
+      err.textContent = "";
+      const amount = Number(String(document.getElementById("amount").value).replace(",", "."));
+      const cardDigits = cardInput.value.replace(/\D/g, "");
 
+      if (!state.fromServer || state.balance === null) {
+        err.textContent = "Спочатку дочекайся синхронізації балансу з сервера.";
+        notify("error");
+        return;
+      }
+      if (!amount || amount <= 0) {
+        err.textContent = "Вкажи суму виплати в гривнях.";
+        notify("error");
+        return;
+      }
+      if (amount < CONFIG.minPayout) {
+        err.textContent = "Мінімальна сума — " + formatMoney(CONFIG.minPayout) + " ₴.";
+        notify("error");
+        return;
+      }
+      if (amount > Number(state.balance)) {
+        err.textContent = "Недостатньо коштів на балансі.";
+        notify("error");
+        return;
+      }
+      if (cardDigits.length < 16 || cardDigits.length > 19) {
+        err.textContent = "Перевір номер картки (16–19 цифр).";
+        notify("error");
+        return;
+      }
 
-async def credit_task(user_id: int, task_id: str, amount: float) -> tuple[bool, float]:
-    async with _lock:
-        store = _load()
-        profile = _user(store, user_id)
-        if profile["tasks"].get(task_id):
-            return False, money(profile["balance"])
-        profile["tasks"][task_id] = True
-        profile["balance"] = money(profile["balance"] + amount)
-        _save(store)
-        return True, profile["balance"]
-
-
-async def check_tasks_for_user(bot: Bot, user_id: int, task_id: str | None = None) -> dict[str, Any]:
-    async with _lock:
-        store = _load()
-        catalog = list(active_catalog(store))
-        profile = _user(store, user_id)
-        already = dict(profile["tasks"])
-        balance = money(profile["balance"])
-
-    targets = [t for t in catalog if not task_id or str(t.get("id")) == str(task_id)]
-    credited: list[str] = []
-    skipped: list[str] = []
-    missing: list[str] = []
-
-    sub_pending = [
-        t
-        for t in targets
-        if not already.get(str(t.get("id")))
-        and str(t.get("type") or TASK_SUBSCRIBE) != TASK_REACT_TYPE
-    ]
-    sub_ok: dict[str, bool] = {}
-    if sub_pending:
-        sub_checks = await asyncio.gather(
-            *[
-                is_channel_member(
-                    bot,
-                    user_id,
-                    str(t.get("username") or CHANNEL_USERNAME),
-                )
-                for t in sub_pending
-            ],
-            return_exceptions=True,
-        )
-        for task, result in zip(sub_pending, sub_checks):
-            sub_ok[str(task.get("id"))] = (
-                bool(result) if not isinstance(result, Exception) else False
-            )
-
-    for task in targets:
-        tid = str(task.get("id"))
-        kind = str(task.get("type") or TASK_SUBSCRIBE)
-        reward = money(task.get("reward") or 0)
-        if already.get(tid):
-            skipped.append(tid)
-            continue
-        if kind == TASK_REACT_TYPE:
-            ok = await user_reacted_to_task(user_id, task)
-        else:
-            ok = sub_ok.get(tid, False)
-        if not ok:
-            missing.append(tid)
-            continue
-        done, balance = await credit_task(user_id, tid, reward)
-        if done:
-            credited.append(tid)
-            already[tid] = True
-        else:
-            skipped.append(tid)
-
-    async with _lock:
-        store = _load()
-        profile = _user(store, user_id)
-        tasks = dict(profile["tasks"])
-        balance = money(profile["balance"])
-        sponsors_ok = bool(profile.get("sponsors_ok"))
-        catalog_now = list(active_catalog(store))
-
-    return {
-        "ok": True,
-        "credited": credited,
-        "skipped": skipped,
-        "missing": missing,
-        "balance": balance,
-        "tasks": tasks,
-        "catalog": catalog_public(profile),
-        "sponsors_ok": sponsors_ok,
-        "sponsors": sponsor_public_list(profile),
-        "ref_count": int(profile["ref_count"]),
-        "is_admin": is_admin(user_id),
-        "user_id": int(user_id),
-        "min_payout": MIN_PAYOUT,
-        "catalog_count": len(catalog_now),
-    }
-
-
-def format_check_text(result: dict[str, Any]) -> str:
-    lines = ["🌙 <b>Перевірка завдань</b>"]
-    by_id = {str(t.get("id")): t for t in (result.get("catalog") or [])}
-    if not by_id:
-        lines.append("Каталог завдань порожній. Адмін додасть їх у панелі.")
-    for tid in result.get("credited") or []:
-        task = by_id.get(tid) or {}
-        lines.append(
-            f"✓ {task.get('title') or tid}. +{money(task.get('reward') or 0):.2f} ₴"
-        )
-    for tid in result.get("skipped") or []:
-        task = by_id.get(tid) or {}
-        lines.append(f"✓ {task.get('title') or tid} вже зараховано.")
-    for tid in result.get("missing") or []:
-        task = by_id.get(tid) or {}
-        kind = task.get("type")
-        if kind == TASK_REACT_TYPE:
-            lines.append(
-                f"✖ Реакцію для «{task.get('title') or tid}» не знайдено. "
-                "Постав реакцію на вказаний пост і перевір знову."
-            )
-        else:
-            lines.append(
-                f"✖ Підписку для «{task.get('title') or tid}» не знайдено. "
-                f"Відкрий {task.get('username') or ''} і підпишись."
-            )
-    lines.append(f"\nБаланс: <b>{result['balance']:.2f} ₴</b>")
-    return "\n".join(lines)
-
-
-# ---------------------------------------------------------------------------
-# Реферали
-# ---------------------------------------------------------------------------
-async def apply_referral(newbie_id: int, referrer_id: int) -> str | None:
-    if newbie_id == referrer_id:
-        return None
-    if referrer_id <= 0:
-        return None
-
-    async with _lock:
-        store = _load()
-        newbie = _user(store, newbie_id)
-        if newbie.get("referred_by") is not None:
-            return None
-        referrer = _user(store, referrer_id)
-        newbie["referred_by"] = referrer_id
-        if newbie_id not in referrer["referrals"]:
-            referrer["referrals"].append(newbie_id)
-        referrer["ref_count"] = int(referrer["ref_count"]) + 1
-        referrer["balance"] = money(referrer["balance"] + REF_BONUS)
-        _save(store)
-        new_balance = referrer["balance"]
-        refs = referrer["ref_count"]
-
-    return (
-        "💸 Новий друг зайшов за твоїм посиланням.\n"
-        f"Користувач: <code>{newbie_id}</code>\n"
-        f"Нараховано: <b>+{REF_BONUS:.2f} ₴</b>\n"
-        f"Рефералів: {refs} · баланс: <b>{new_balance:.2f} ₴</b>"
-    )
-
-
-async def add_balance_to_user(target_id: int, amount: float) -> float:
-    async with _lock:
-        store = _load()
-        profile = _user(store, target_id)
-        profile["balance"] = money(profile["balance"] + amount)
-        _save(store)
-        return profile["balance"]
-
-
-async def touch_user(user_id: int, username: str | None, first_name: str | None) -> dict[str, Any]:
-    async with _lock:
-        store = _load()
-        profile = _user(store, user_id)
-        if username:
-            profile["username"] = username
-        if first_name:
-            profile["first_name"] = first_name
-        _save(store)
-        return profile
-
-
-# ---------------------------------------------------------------------------
-# Виплати
-# ---------------------------------------------------------------------------
-PAY_START_RE = re.compile(
-    r"^pay_(?P<uid>\d+)_(?P<amount>[\d.]+)(?:_(?P<card>\d{12,19}))?$",
-    re.IGNORECASE,
-)
-
-
-def _payout_key(user_id: int, amount: str, card: str) -> str:
-    digits_only = re.sub(r"\D", "", card)
-    return f"{user_id}:{amount}:{digits_only}"
-
-
-async def create_payout(
-    bot: Bot,
-    *,
-    from_user_id: int,
-    username: str | None,
-    amount: float,
-    card: str,
-    extra: str = "",
-    deduct: bool = True,
-) -> tuple[bool, str]:
-    amount = money(amount)
-    card_fmt = re.sub(r"\D", "", card)
-    if amount < MIN_PAYOUT:
-        return False, f"Мінімальна сума виплати — {MIN_PAYOUT:.2f} ₴."
-    if len(card_fmt) < 16 or len(card_fmt) > 19:
-        return False, "Перевір номер картки (16–19 цифр)."
-
-    fingerprint = _payout_key(from_user_id, f"{amount:.2f}", card_fmt)
-    card_pretty = " ".join(card_fmt[i : i + 4] for i in range(0, len(card_fmt), 4)) or "—"
-
-    async with _lock:
-        store = _load()
-        profile = _user(store, from_user_id)
-        seen: list[str] = profile.setdefault("seen_payouts", [])
-        if fingerprint in seen:
-            return False, "Цю заявку вже зафіксовано."
-        if deduct and money(profile["balance"]) < amount:
-            return False, "Недостатньо коштів на балансі."
-        if deduct:
-            profile["balance"] = money(profile["balance"] - amount)
-        seen.append(fingerprint)
-        seen[:] = seen[-40:]
-        store["payouts"].append(
-            {
-                "user_id": from_user_id,
-                "username": username,
-                "amount": f"{amount:.2f}",
-                "card": card_fmt,
-                "ts": int(time.time()),
-            }
-        )
-        new_balance = money(profile["balance"])
-        _save(store)
-
-    uname = f"@{username}" if username else "—"
-    text = (
-        "💸 <b>Заявка на виплату Night Royale</b>\n\n"
-        f"ID: <code>{from_user_id}</code>\n"
-        f"Username: {uname}\n"
-        f"Сума: <b>{amount:.2f} ₴</b>\n"
-        f"Картка: <code>{card_pretty}</code>\n"
-        f"Баланс після заявки: <b>{new_balance:.2f} ₴</b>\n"
-        f"{extra}"
-    ).strip()
-
-    for admin_id in ADMIN_IDS:
-        with suppress(TelegramAPIError):
-            await bot.send_message(admin_id, text)
-    return True, f"Заявку прийнято. Баланс: {new_balance:.2f} ₴."
-
-
-def parse_pay_payload(args: str) -> tuple[int, float, str] | None:
-    match = PAY_START_RE.match(args.strip())
-    if not match:
-        return None
-    uid = int(match.group("uid"))
-    amount = float(match.group("amount"))
-    card = match.group("card") or ""
-    return uid, amount, card
-
-
-# ---------------------------------------------------------------------------
-# Адмін-статистика
-# ---------------------------------------------------------------------------
-def admin_stats_payload(store: dict[str, Any]) -> dict[str, Any]:
-    """Цифри з database.json для Mini App і Telegram-адмінки."""
-    users = store.get("users") or {}
-    payouts = store.get("payouts") or []
-    n_users = len(users)
-    total_balance = money(sum(float(u.get("balance") or 0) for u in users.values()))
-    total_refs = sum(int(u.get("ref_count") or 0) for u in users.values())
-    n_pays = len(payouts)
-    payout_sum = money(sum(float(p.get("amount") or 0) for p in payouts))
-    catalog = catalog_public(None)
-    return {
-        "ok": True,
-        "users": n_users,
-        "user_count": n_users,
-        "total_users": n_users,
-        "total_balance": total_balance,
-        "balance_sum": total_balance,
-        "total_refs": total_refs,
-        "referrals": total_refs,
-        "payouts": n_pays,
-        "payout_count": n_pays,
-        "payout_sum": payout_sum,
-        "catalog": catalog,
-        "min_payout": MIN_PAYOUT,
-        "last_post_id": (store.get("channel") or {}).get("last_post_id"),
-        "reactors": len((store.get("channel") or {}).get("reactors") or []),
-        "stats": {
-            "users": n_users,
-            "total_balance": total_balance,
-            "total_refs": total_refs,
-            "payouts": n_pays,
-            "payout_sum": payout_sum,
-        },
-    }
-
-
-def collect_stats(store: dict[str, Any]) -> str:
-    stats = admin_stats_payload(store)
-    users = store.get("users") or {}
-    total_users = int(stats["users"])
-    total_balance = money(stats["total_balance"])
-    total_refs = int(stats["total_refs"])
-    catalog = active_catalog(store)
-    payouts = store.get("payouts") or []
-    payout_sum = money(stats["payout_sum"])
-    task_lines = []
-    for task in catalog:
-        tid = str(task.get("id"))
-        done = sum(1 for u in users.values() if (u.get("tasks") or {}).get(tid))
-        task_lines.append(
-            f"• {task.get('title')} ({task.get('type')}) {money(task.get('reward') or 0):.2f} ₴ — виконали {done}"
-        )
-    tasks_block = "\n".join(task_lines) if task_lines else "• Каталог порожній"
-    return (
-        "🛡 <b>Адмін-панель Night Royale</b>\n\n"
-        f"Спонсор: {CHANNEL_USERNAME}\n"
-        f"Користувачів: <b>{total_users}</b>\n"
-        f"Сумарний баланс: <b>{total_balance:.2f} ₴</b>\n"
-        f"Рефералів (усі): <b>{total_refs}</b>\n"
-        f"Завдань у каталозі: <b>{len(catalog)}</b>\n"
-        f"{tasks_block}\n"
-        f"Заявок на виплату: <b>{len(payouts)}</b> ({payout_sum:.2f} ₴)\n"
-        f"Мін. виплата: <b>{MIN_PAYOUT:.2f} ₴</b>\n\n"
-        "➕ Нове завдання — посилання, тип, нагорода в ₴\n"
-        "Команда: <code>/add_balance user_id сума</code>"
-    )
-
-
-def format_task_list(store: dict[str, Any]) -> tuple[str, InlineKeyboardMarkup]:
-    catalog = active_catalog(store)
-    if not catalog:
-        text = "📋 Каталог завдань порожній.\nНатисни «➕ Нове завдання», щоб додати перше."
-        return text, admin_kb()
-    lines = ["📋 <b>Завдання Mini App</b>"]
-    rows: list[list[InlineKeyboardButton]] = []
-    for task in catalog:
-        kind = "підписка" if task.get("type") == TASK_SUBSCRIBE else "реакція"
-        lines.append(
-            f"• <code>{task.get('id')}</code> — {task.get('title')} ({kind})\n"
-            f"  {task.get('url')} · {money(task.get('reward') or 0):.2f} ₴"
-        )
-        rows.append(
-            [
-                InlineKeyboardButton(
-                    text=f"🗑 {task.get('id')}",
-                    callback_data=f"admin_task_del:{task.get('id')}",
-                )
-            ]
-        )
-    rows.append([InlineKeyboardButton(text="➕ Нове завдання", callback_data="admin_task_new")])
-    rows.append([InlineKeyboardButton(text="← Адмінка", callback_data="admin_panel")])
-    return "\n".join(lines), InlineKeyboardMarkup(inline_keyboard=rows)
-
-
-async def create_catalog_task(
-    *,
-    url_raw: str,
-    kind: str,
-    reward: float,
-    title: str | None = None,
-) -> dict[str, Any]:
-    parsed = parse_telegram_link(url_raw)
-    if not parsed:
-        raise ValueError("bad_link")
-    kind = TASK_SUBSCRIBE if kind == TASK_SUBSCRIBE else TASK_REACT_TYPE
-    async with _lock:
-        store = _load()
-        seq = int(store.get("task_seq") or 0) + 1
-        store["task_seq"] = seq
-        task = {
-            "id": f"task_{seq}",
-            "type": kind,
-            "title": title
-            or ("Підписка на канал" if kind == TASK_SUBSCRIBE else "Поставити реакцію"),
-            "username": parsed["username"],
-            "url": parsed["url"],
-            "post_id": parsed["post_id"],
-            "reward": money(reward),
-            "active": True,
+      haptic("heavy");
+      try {
+        const data = await api("/api/payout", {
+          method: "POST",
+          body: { amount: formatMoney(amount), card: cardDigits }
+        });
+        if (!data.ok) {
+          err.textContent = data.message || "Не вдалося створити заявку.";
+          notify("error");
+          return;
         }
-        store.setdefault("task_catalog", []).append(task)
-        _save(store)
-        return task
-
-
-# ---------------------------------------------------------------------------
-# Хендлери бота
-# ---------------------------------------------------------------------------
-@router.message(CommandStart())
-async def cmd_start(message: Message, command: CommandObject, bot: Bot) -> None:
-    user = message.from_user
-    if not user:
-        return
-
-    await touch_user(user.id, user.username, user.first_name)
-    args = (command.args or "").strip()
-    extra_note = ""
-
-    if args.startswith("ref_"):
-        ref_raw = args[4:]
-        if ref_raw.isdigit():
-            referrer_id = int(ref_raw)
-            if referrer_id == user.id:
-                extra_note = "\n\n⚠ Самореферал не зараховується."
-            else:
-                notice = await apply_referral(user.id, referrer_id)
-                if notice:
-                    extra_note = "\n\n✦ Запрошення друга прийнято."
-                    with suppress(TelegramAPIError):
-                        await bot.send_message(referrer_id, notice)
-                    for admin_id in ADMIN_IDS:
-                        with suppress(TelegramAPIError):
-                            await bot.send_message(
-                                admin_id,
-                                "👤 Новий реферал\n"
-                                f"Запрошувач: <code>{referrer_id}</code>\n"
-                                f"Новий: <code>{user.id}</code> @{user.username or '—'}",
-                            )
-                else:
-                    extra_note = "\n\n✦ Реферальний бонус для цього акаунта вже був використаний."
-
-    gate = await require_sponsors(bot, user.id)
-    if gate:
-        await send_sponsor_gate(message, gate)
-        if extra_note:
-            await message.answer(extra_note.strip())
-        return
-
-    if args.lower() in {"check_tasks", "check", "check_sub"}:
-        result = await check_tasks_for_user(bot, user.id)
-        extra_note = (extra_note or "") + "\n\n" + format_check_text(result)
-    elif args.lower().startswith("pay_"):
-        parsed = parse_pay_payload(args)
-        if parsed:
-            _uid, amount, card = parsed
-            ok, msg = await create_payout(
-                bot,
-                from_user_id=user.id,
-                username=user.username,
-                amount=amount,
-                card=card,
-                extra="джерело: /start pay_",
-                deduct=True,
-            )
-            extra_note = (extra_note or "") + f"\n\n{'✦' if ok else '⚠'} {msg}"
-        else:
-            extra_note = (extra_note or "") + "\n\n⚠ Не вдалося розібрати параметри виплати."
-
-    await open_app(message, extra_note)
-
-
-@router.callback_query(F.data == "check_sponsors")
-async def cb_check_sponsors(callback: CallbackQuery, bot: Bot) -> None:
-    with suppress(TelegramAPIError):
-        await callback.answer("Перевіряю підписку…")
-
-    user = callback.from_user
-    if not user:
-        return
-
-    result = await check_sponsors_for_user(bot, user.id, use_cache=False)
-    if not callback.message:
-        return
-    if result["sponsors_ok"]:
-        await callback.message.answer(
-            "✅ Підписку підтверджено. Доступ відкрито.",
-            reply_markup=start_inline_kb(user.id),
-        )
-        await callback.message.answer(
-            "Швидкий доступ завжди під рукою ↓",
-            reply_markup=main_reply_kb(),
-        )
-        return
-    missing = ", ".join(result["missing"]) or "спонсорів"
-    await callback.message.answer(
-        f"Ще немає підписки на: <b>{missing}</b>\n"
-        "Підпишись на всіх і натисни перевірку ще раз.",
-        reply_markup=sponsors_kb(),
-    )
-
-
-@router.message(Command("check"))
-@router.message(F.text == "🌙 Перевірити завдання")
-async def cmd_check(message: Message, bot: Bot) -> None:
-    if not message.from_user:
-        return
-    gate = await require_sponsors(bot, message.from_user.id)
-    if gate:
-        await send_sponsor_gate(message, gate)
-        return
-    result = await check_tasks_for_user(bot, message.from_user.id)
-    await message.answer(format_check_text(result))
-
-
-@router.callback_query(F.data == "check_tasks")
-@router.callback_query(F.data == "check_sub")
-async def cb_check_tasks(callback: CallbackQuery, bot: Bot) -> None:
-    with suppress(TelegramAPIError):
-        await callback.answer()
-
-    user = callback.from_user
-    if not user:
-        return
-    gate = await require_sponsors(bot, user.id)
-    if gate:
-        if callback.message:
-            await send_sponsor_gate(callback.message, gate)
-        return
-    result = await check_tasks_for_user(bot, user.id)
-    if callback.message:
-        await callback.message.answer(format_check_text(result))
-
-
-@router.message(Command("balance"))
-@router.message(F.text == "💳 Баланс")
-async def cmd_balance(message: Message, bot: Bot) -> None:
-    if not message.from_user:
-        return
-    gate = await require_sponsors(bot, message.from_user.id)
-    if gate:
-        await send_sponsor_gate(message, gate)
-        return
-    profile = await touch_user(
-        message.from_user.id,
-        message.from_user.username,
-        message.from_user.first_name,
-    )
-    await message.answer(
-        f"Баланс: <b>{money(profile['balance']):.2f} ₴</b>\n"
-        f"Рефералів: <b>{int(profile['ref_count'])}</b>\n"
-        f"Виконаних завдань: <b>{sum(1 for v in (profile.get('tasks') or {}).values() if v)}</b>"
-    )
-
-
-@router.message(Command("admin"))
-async def cmd_admin(message: Message) -> None:
-    if not message.from_user or not is_admin(message.from_user.id):
-        return
-    async with _lock:
-        store = _load()
-        text = collect_stats(store)
-    await message.answer(text, reply_markup=admin_kb())
-
-
-@router.callback_query(F.data == "admin_panel")
-@router.callback_query(F.data == "admin_stats")
-async def cb_admin_stats(callback: CallbackQuery) -> None:
-    if not callback.from_user or not is_admin(callback.from_user.id):
-        await callback.answer("Немає доступу", show_alert=True)
-        return
-    async with _lock:
-        store = _load()
-        text = collect_stats(store)
-    await callback.answer()
-    if callback.message:
-        await callback.message.answer(text, reply_markup=admin_kb())
-
-
-@router.callback_query(F.data == "admin_task_new")
-async def cb_admin_task_new(callback: CallbackQuery, state: FSMContext) -> None:
-    if not callback.from_user or not is_admin(callback.from_user.id):
-        await callback.answer("Немає доступу", show_alert=True)
-        return
-    await state.set_state(AdminStates.waiting_task_link)
-    await callback.answer()
-    if callback.message:
-        await callback.message.answer(
-            "Надішли посилання на канал або пост.\n"
-            "Приклади:\n"
-            "<code>https://t.me/CryptoGraf_Dark</code>\n"
-            "<code>https://t.me/CryptoGraf_Dark/12</code>\n"
-            "<code>@CryptoGraf_Dark</code>"
-        )
-
-
-@router.message(AdminStates.waiting_task_link)
-async def admin_task_link(message: Message, state: FSMContext) -> None:
-    if not message.from_user or not is_admin(message.from_user.id):
-        await state.clear()
-        return
-    parsed = parse_telegram_link(message.text or "")
-    if not parsed:
-        await message.answer("Не розпізнав посилання. Надішли t.me/... або @username.")
-        return
-    await state.update_data(task_link=message.text.strip(), parsed=parsed)
-    await message.answer("Обери тип завдання:", reply_markup=task_type_kb())
-
-
-@router.callback_query(F.data.startswith("admin_task_type:"))
-async def cb_admin_task_type(callback: CallbackQuery, state: FSMContext) -> None:
-    if not callback.from_user or not is_admin(callback.from_user.id):
-        await callback.answer("Немає доступу", show_alert=True)
-        return
-    kind = callback.data.split(":", 1)[-1]
-    await state.update_data(task_type=kind)
-    await state.set_state(AdminStates.waiting_task_reward)
-    await callback.answer()
-    if callback.message:
-        await callback.message.answer("Надішли нагороду в гривнях. Наприклад: <code>5</code> або <code>2.50</code>")
-
-
-@router.message(AdminStates.waiting_task_reward)
-async def admin_task_reward(message: Message, state: FSMContext) -> None:
-    if not message.from_user or not is_admin(message.from_user.id):
-        await state.clear()
-        return
-    data = await state.get_data()
-    if not data.get("task_link") or not data.get("task_type"):
-        await state.set_state(AdminStates.waiting_task_link)
-        await message.answer("Спочатку надішли посилання ще раз.")
-        return
-    try:
-        reward = money(float((message.text or "").replace(",", ".").split()[0]))
-    except (ValueError, IndexError):
-        await message.answer("Сума має бути числом у гривнях.")
-        return
-    if reward <= 0:
-        await message.answer("Нагорода має бути більшою за 0 ₴.")
-        return
-    try:
-        task = await create_catalog_task(
-            url_raw=str(data["task_link"]),
-            kind=str(data["task_type"]),
-            reward=reward,
-        )
-    except ValueError:
-        await message.answer("Не вдалося зберегти завдання. Перевір посилання.")
-        await state.clear()
-        return
-    await state.clear()
-    await message.answer(
-        "✓ Завдання додано в <code>database.json</code> і з’явиться в Mini App у всіх.\n"
-        f"ID: <code>{task['id']}</code>\n"
-        f"Тип: {task['type']}\n"
-        f"Канал: {task['url']}\n"
-        f"Нагорода: <b>{task['reward']:.2f} ₴</b>",
-        reply_markup=admin_kb(),
-    )
-
-
-@router.callback_query(F.data == "admin_task_list")
-async def cb_admin_task_list(callback: CallbackQuery) -> None:
-    if not callback.from_user or not is_admin(callback.from_user.id):
-        await callback.answer("Немає доступу", show_alert=True)
-        return
-    async with _lock:
-        store = _load()
-        text, kb = format_task_list(store)
-    await callback.answer()
-    if callback.message:
-        await callback.message.answer(text, reply_markup=kb)
-
-
-@router.callback_query(F.data.startswith("admin_task_del:"))
-async def cb_admin_task_del(callback: CallbackQuery) -> None:
-    if not callback.from_user or not is_admin(callback.from_user.id):
-        await callback.answer("Немає доступу", show_alert=True)
-        return
-    task_id = callback.data.split(":", 1)[-1]
-    async with _lock:
-        store = _load()
-        changed = False
-        for task in store.get("task_catalog") or []:
-            if str(task.get("id")) == task_id:
-                task["active"] = False
-                changed = True
-                break
-        if changed:
-            _save(store)
-        text, kb = format_task_list(store)
-    await callback.answer("Видалено" if changed else "Не знайдено")
-    if callback.message:
-        await callback.message.answer(text, reply_markup=kb)
-
-
-@router.callback_query(F.data == "admin_add")
-async def cb_admin_add(callback: CallbackQuery, state: FSMContext) -> None:
-    if not callback.from_user or not is_admin(callback.from_user.id):
-        await callback.answer("Немає доступу", show_alert=True)
-        return
-    await state.set_state(AdminStates.waiting_add_balance)
-    await callback.answer()
-    if callback.message:
-        await callback.message.answer(
-            "Надішли: <code>user_id сума</code>\n"
-            "Приклад: <code>1099861854 25.50</code>\n"
-            "Або команду: <code>/add_balance 1099861854 25.50</code>"
-        )
-
-
-@router.message(AdminStates.waiting_add_balance)
-async def admin_add_wait(message: Message, state: FSMContext, bot: Bot) -> None:
-    if not message.from_user or not is_admin(message.from_user.id):
-        await state.clear()
-        return
-    parts = (message.text or "").replace(",", ".").split()
-    if len(parts) < 2 or not parts[0].lstrip("-").isdigit():
-        await message.answer("Формат: <code>user_id сума</code>")
-        return
-    try:
-        amount = money(float(parts[1]))
-    except ValueError:
-        await message.answer("Сума має бути числом.")
-        return
-    target_id = int(parts[0])
-    new_balance = await add_balance_to_user(target_id, amount)
-    await state.clear()
-    await message.answer(
-        f"✓ Нараховано <b>{amount:.2f} ₴</b> користувачу <code>{target_id}</code>.\n"
-        f"Новий баланс: <b>{new_balance:.2f} ₴</b>"
-    )
-    with suppress(TelegramAPIError):
-        await bot.send_message(
-            target_id,
-            f"💸 Адміністратор нарахував тобі <b>{amount:.2f} ₴</b>.\n"
-            f"Баланс: <b>{new_balance:.2f} ₴</b>",
-        )
-
-
-@router.message(Command("add_balance"))
-async def cmd_add_balance(message: Message, command: CommandObject, bot: Bot) -> None:
-    if not message.from_user or not is_admin(message.from_user.id):
-        return
-    parts = (command.args or "").replace(",", ".").split()
-    if len(parts) < 2:
-        await message.answer("Формат: <code>/add_balance user_id сума_в_гривнях</code>")
-        return
-    if not parts[0].lstrip("-").isdigit():
-        await message.answer("user_id має бути числом.")
-        return
-    try:
-        amount = money(float(parts[1]))
-    except ValueError:
-        await message.answer("Сума має бути числом.")
-        return
-    target_id = int(parts[0])
-    new_balance = await add_balance_to_user(target_id, amount)
-    await message.answer(
-        f"✓ Нараховано <b>{amount:.2f} ₴</b> користувачу <code>{target_id}</code>.\n"
-        f"Новий баланс: <b>{new_balance:.2f} ₴</b>"
-    )
-    if target_id != message.from_user.id:
-        with suppress(TelegramAPIError):
-            await bot.send_message(
-                target_id,
-                f"💸 Адміністратор нарахував тобі <b>{amount:.2f} ₴</b>.\n"
-                f"Баланс: <b>{new_balance:.2f} ₴</b>",
-            )
-
-
-@router.message(F.web_app_data)
-async def on_webapp_data(message: Message, bot: Bot) -> None:
-    user = message.from_user
-    raw = message.web_app_data.data if message.web_app_data else ""
-    if not user or not raw:
-        return
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError:
-        await message.answer("Не вдалося прочитати дані Mini App.")
-        return
-
-    kind = str(payload.get("type") or payload.get("action") or "")
-    if kind in {"check_sponsors", "sponsors"}:
-        result = await check_sponsors_for_user(bot, user.id, use_cache=False)
-        if result["sponsors_ok"]:
-            await open_app(message, "\n\n✅ Підписку підтверджено.")
-        else:
-            await send_sponsor_gate(message, result)
-        return
-    gate = await require_sponsors(bot, user.id)
-    if gate:
-        await send_sponsor_gate(message, gate)
-        return
-    if kind in {"check_tasks", "check"}:
-        result = await check_tasks_for_user(
-            bot,
-            user.id,
-            str(payload.get("task_id") or "") or None,
-        )
-        await message.answer(format_check_text(result))
-        return
-    if kind != "payout":
-        await message.answer("Mini App надіслав дані.")
-        return
-
-    try:
-        amount = float(str(payload.get("amount") or "0").replace(",", "."))
-    except ValueError:
-        amount = 0.0
-    card = str(payload.get("card") or "")
-    ok, msg = await create_payout(
-        bot,
-        from_user_id=user.id,
-        username=user.username,
-        amount=amount,
-        card=card,
-        extra="джерело: Mini App sendData",
-        deduct=True,
-    )
-    await message.answer(("✦ " if ok else "⚠ ") + msg)
-
-
-@router.channel_post()
-async def on_channel_post(message: Message) -> None:
-    username = message.chat.username
-    if not username:
-        return
-    async with _lock:
-        store = _load()
-        bucket = chat_bucket(store, username)
-        bucket["chat_id"] = message.chat.id
-        bucket["last_post_id"] = message.message_id
-        bucket.setdefault("posts", {})
-        store["channel"]["chat_id"] = message.chat.id
-        store["channel"]["last_post_id"] = message.message_id
-        store["channel"]["reactors"] = []
-        _save(store)
-    log.info("Запам'ятано пост @%s #%s", username, message.message_id)
-
-
-@router.message_reaction()
-async def on_message_reaction(event: MessageReactionUpdated) -> None:
-    user = event.user
-    if not user or user.is_bot:
-        return
-    new_reactions = event.new_reaction or []
-    username = event.chat.username
-    async with _lock:
-        store = _load()
-        if username:
-            bucket = chat_bucket(store, username)
-            posts = bucket.setdefault("posts", {})
-            key = str(event.message_id)
-            reactors = [str(x) for x in (posts.get(key) or [])]
-            uid = str(user.id)
-            if new_reactions:
-                if uid not in reactors:
-                    reactors.append(uid)
-            else:
-                reactors = [x for x in reactors if x != uid]
-            posts[key] = reactors
-            bucket["chat_id"] = event.chat.id
-        channel = store["channel"]
-        if channel.get("chat_id") == event.chat.id and channel.get("last_post_id") == event.message_id:
-            reactors = [str(x) for x in (channel.get("reactors") or [])]
-            uid = str(user.id)
-            if new_reactions:
-                if uid not in reactors:
-                    reactors.append(uid)
-            else:
-                reactors = [x for x in reactors if x != uid]
-            channel["reactors"] = reactors
-        _save(store)
-
-
-# ---------------------------------------------------------------------------
-# HTTP API для Mini App
-# ---------------------------------------------------------------------------
-def validate_init_data(init_data: str) -> dict[str, Any] | None:
-    if not init_data:
-        return None
-    parsed = dict(parse_qsl(init_data, keep_blank_values=True, encoding="utf-8"))
-    received_hash = parsed.pop("hash", None)
-    if not received_hash:
-        return None
-    data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(parsed.items()))
-    secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
-    calculated = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(calculated, received_hash):
-        return None
-    auth_date = parsed.get("auth_date")
-    if auth_date and auth_date.isdigit():
-        if abs(time.time() - int(auth_date)) > 86400 * 2:
-            return None
-    try:
-        user = json.loads(parsed.get("user") or "{}")
-    except json.JSONDecodeError:
-        return None
-    if not user.get("id"):
-        return None
-    return user
-
-
-def extract_init_data(request: web.Request) -> str:
-    header = request.headers.get("X-Telegram-Init-Data") or ""
-    if header:
-        return header
-    auth = request.headers.get("Authorization") or ""
-    if auth.lower().startswith("tma "):
-        return auth[4:].strip()
-    if request.method == "POST":
-        return ""
-    return request.query.get("initData") or ""
-
-
-async def api_user(request: web.Request) -> dict[str, Any]:
-    tg_user = validate_init_data(extract_init_data(request))
-    if not tg_user:
-        raise web.HTTPUnauthorized(
-            text='{"ok":false,"error":"invalid_init_data"}',
-            content_type="application/json",
-        )
-    return tg_user
-
-
-@web.middleware
-async def cors_middleware(request: web.Request, handler):
-    if request.method == "OPTIONS":
-        resp: web.StreamResponse = web.Response()
-    else:
-        try:
-            resp = await handler(request)
-        except web.HTTPException as exc:
-            resp = web.Response(
-                status=exc.status,
-                text=exc.text,
-                content_type=exc.content_type or "application/json",
-            )
-    resp.headers["Access-Control-Allow-Origin"] = "*"
-    resp.headers["Access-Control-Allow-Headers"] = (
-        "Content-Type, X-Telegram-Init-Data, Authorization"
-    )
-    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    return resp
-
-
-async def json_profile(uid: int, profile: dict[str, Any]) -> web.Response:
-    return web.json_response(public_profile(uid, profile, is_admin=is_admin(uid)))
-
-
-async def api_me(request: web.Request) -> web.Response:
-    tg_user = await api_user(request)
-    uid = int(tg_user["id"])
-    await touch_user(uid, tg_user.get("username"), tg_user.get("first_name"))
-    if _bot is not None:
-        result = await check_sponsors_for_user(_bot, uid)
-        profile = result["profile"]
-    else:
-        async with _lock:
-            store = _load()
-            profile = _user(store, uid)
-    return await json_profile(uid, profile)
-
-
-async def api_sponsors_check(request: web.Request) -> web.Response:
-    tg_user = await api_user(request)
-    if _bot is None:
-        return web.json_response({"ok": False, "error": "bot_offline"}, status=503)
-    uid = int(tg_user["id"])
-    result = await check_sponsors_for_user(_bot, uid, use_cache=False)
-    payload = public_profile(uid, result["profile"], is_admin=is_admin(uid))
-    payload["missing"] = result["missing"]
-    return web.json_response(payload)
-
-
-async def api_check(request: web.Request) -> web.Response:
-    tg_user = await api_user(request)
-    if _bot is None:
-        return web.json_response({"ok": False, "error": "bot_offline"}, status=503)
-    uid = int(tg_user["id"])
-    gate = await require_sponsors(_bot, uid)
-    if gate:
-        payload = public_profile(uid, gate["profile"], is_admin=is_admin(uid))
-        payload["ok"] = False
-        payload["error"] = "sponsors_required"
-        payload["missing"] = gate["missing"]
-        return web.json_response(payload, status=403)
-    body: dict[str, Any] = {}
-    if request.body_exists:
-        with suppress(Exception):
-            body = await request.json()
-    task_id = str((body or {}).get("task_id") or "")
-    result = await check_tasks_for_user(_bot, uid, task_id or None)
-    result["task_id"] = task_id
-    result["message"] = format_check_text(result)
-    return web.json_response(result)
-
-
-async def api_payout(request: web.Request) -> web.Response:
-    tg_user = await api_user(request)
-    if _bot is None:
-        return web.json_response({"ok": False, "error": "bot_offline"}, status=503)
-    uid = int(tg_user["id"])
-    gate = await require_sponsors(_bot, uid)
-    if gate:
-        return web.json_response(
-            {"ok": False, "error": "sponsors_required", "balance": gate["balance"]},
-            status=403,
-        )
-    body = await request.json()
-    try:
-        amount = float(str(body.get("amount") or "0").replace(",", "."))
-    except ValueError:
-        amount = 0.0
-    card = str(body.get("card") or "")
-    ok, msg = await create_payout(
-        _bot,
-        from_user_id=uid,
-        username=tg_user.get("username"),
-        amount=amount,
-        card=card,
-        extra="джерело: Mini App API",
-        deduct=True,
-    )
-    async with _lock:
-        store = _load()
-        profile = _user(store, uid)
-        balance = money(profile["balance"])
-    return web.json_response({"ok": ok, "message": msg, "balance": balance})
-
-
-async def api_admin_stats(request: web.Request) -> web.Response:
-    tg_user = await api_user(request)
-    if not is_admin(int(tg_user["id"])):
-        return web.json_response({"ok": False, "error": "forbidden"}, status=403)
-    async with _lock:
-        store = _load()
-        payload = admin_stats_payload(store)
-    payload["is_admin"] = True
-    return web.json_response(payload)
-
-
-async def api_admin_add(request: web.Request) -> web.Response:
-    tg_user = await api_user(request)
-    if not is_admin(int(tg_user["id"])):
-        return web.json_response({"ok": False, "error": "forbidden"}, status=403)
-    if _bot is None:
-        return web.json_response({"ok": False, "error": "bot_offline"}, status=503)
-    body = await request.json()
-    try:
-        target_id = int(body.get("user_id"))
-        amount = money(float(str(body.get("amount")).replace(",", ".")))
-    except (TypeError, ValueError):
-        return web.json_response({"ok": False, "error": "bad_request"}, status=400)
-    new_balance = await add_balance_to_user(target_id, amount)
-    with suppress(TelegramAPIError):
-        await _bot.send_message(
-            target_id,
-            f"💸 Адміністратор нарахував тобі <b>{amount:.2f} ₴</b>.\n"
-            f"Баланс: <b>{new_balance:.2f} ₴</b>",
-        )
-    return web.json_response(
-        {"ok": True, "user_id": target_id, "balance": new_balance, "amount": amount}
-    )
-
-
-async def api_admin_create_task(request: web.Request) -> web.Response:
-    tg_user = await api_user(request)
-    if not is_admin(int(tg_user["id"])):
-        return web.json_response({"ok": False, "error": "forbidden"}, status=403)
-    body = await request.json()
-    try:
-        reward = money(float(str(body.get("reward")).replace(",", ".")))
-        kind = str(body.get("type") or "subscribe")
-        url_raw = str(body.get("url") or body.get("link") or "")
-        title = str(body.get("title") or "").strip() or None
-        task = await create_catalog_task(url_raw=url_raw, kind=kind, reward=reward, title=title)
-    except (TypeError, ValueError):
-        return web.json_response({"ok": False, "error": "bad_request"}, status=400)
-    return web.json_response({"ok": True, "task": task, "catalog": catalog_public(None)})
-
-
-async def api_admin_delete_task(request: web.Request) -> web.Response:
-    tg_user = await api_user(request)
-    if not is_admin(int(tg_user["id"])):
-        return web.json_response({"ok": False, "error": "forbidden"}, status=403)
-    body = await request.json()
-    task_id = str(body.get("id") or "")
-    async with _lock:
-        store = _load()
-        changed = False
-        for task in store.get("task_catalog") or []:
-            if str(task.get("id")) == task_id:
-                task["active"] = False
-                changed = True
-                break
-        if changed:
-            _save(store)
-    return web.json_response({"ok": changed, "catalog": catalog_public(None)})
-
-
-async def api_health(_: web.Request) -> web.Response:
-    return web.json_response({"ok": True, "service": "night-royale"})
-
-
-def setup_http_app() -> web.Application:
-    app = web.Application(middlewares=[cors_middleware])
-    app.router.add_get("/api/health", api_health)
-    app.router.add_get("/api/me", api_me)
-    app.router.add_post("/api/me", api_me)
-    app.router.add_post("/api/sponsors/check", api_sponsors_check)
-    app.router.add_post("/api/tasks/check", api_check)
-    app.router.add_post("/api/payout", api_payout)
-    app.router.add_get("/api/admin/stats", api_admin_stats)
-    app.router.add_get("/api/admin/stats/", api_admin_stats)
-    app.router.add_post("/api/admin/stats", api_admin_stats)
-    app.router.add_post("/api/admin/stats/", api_admin_stats)
-    app.router.add_post("/api/admin/add_balance", api_admin_add)
-    app.router.add_post("/api/admin/tasks", api_admin_create_task)
-    app.router.add_post("/api/admin/tasks/delete", api_admin_delete_task)
-    index_path = BASE_DIR / "index.html"
-    bg_path = BASE_DIR / "bg.jpg"
-
-    async def serve_index(_: web.Request) -> web.FileResponse:
-        return web.FileResponse(index_path)
-
-    if index_path.exists():
-        app.router.add_get("/", serve_index)
-        app.router.add_get("/index.html", serve_index)
-    if bg_path.exists():
-        async def serve_bg(_: web.Request) -> web.FileResponse:
-            return web.FileResponse(bg_path)
-
-        app.router.add_get("/bg.jpg", serve_bg)
-    return app
-
-
-# ---------------------------------------------------------------------------
-# Запуск
-# ---------------------------------------------------------------------------
-async def on_startup(bot: Bot) -> None:
-    await bot.set_chat_menu_button(
-        menu_button=MenuButtonWebApp(text="Mini App", web_app=webapp_info())
-    )
-    me = await bot.get_me()
-    log.info("Бот @%s запущено. Mini App: %s", me.username, webapp_info().url)
-    log.info("API: http://%s:%s  PUBLIC_API_URL=%s", API_HOST, API_PORT, PUBLIC_API_URL or "(не задано)")
-    log.info("База: %s", DATA_FILE)
-
-
-async def main() -> None:
-    global _bot
-    bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    _bot = bot
-    dp = Dispatcher(storage=MemoryStorage())
-    dp.include_router(router)
-    dp.startup.register(on_startup)
-
-    app = setup_http_app()
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, API_HOST, API_PORT)
-    await site.start()
-
-    try:
-        await dp.start_polling(
-            bot,
-            allowed_updates=[
-                "message",
-                "callback_query",
-                "channel_post",
-                "message_reaction",
-            ],
-        )
-    finally:
-        await runner.cleanup()
-        await bot.session.close()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+        applyServerState({
+          balance: data.balance,
+          tasks: state.done,
+          catalog: state.catalog,
+          min_payout: CONFIG.minPayout,
+          ref_count: state.refs,
+          is_admin: isAdmin,
+          sponsors_ok: true,
+          sponsors: state.sponsors,
+          user_id: user.id
+        }, true);
+        toast(data.message || "Заявку прийнято");
+        notify("success");
+        document.getElementById("amount").value = "";
+      } catch (e) {
+        err.textContent = "Немає зв'язку з ботом. Відкрий Mini App з кнопки в боті.";
+        notify("error");
+      }
+    });
+
+    document.getElementById("admAddBtn").addEventListener("click", async () => {
+      const admErr = document.getElementById("admError");
+      admErr.textContent = "";
+      const targetId = Number(document.getElementById("admUserId").value);
+      const amount = Number(String(document.getElementById("admAmount").value).replace(",", "."));
+      if (!targetId) {
+        admErr.textContent = "Вкажи user_id.";
+        return;
+      }
+      if (!amount) {
+        admErr.textContent = "Вкажи суму в гривнях.";
+        return;
+      }
+      try {
+        const data = await api("/api/admin/add_balance", {
+          method: "POST",
+          body: { user_id: targetId, amount: amount }
+        });
+        toast("Нараховано " + formatMoney(data.amount) + " ₴");
+        notify("success");
+        if (Number(targetId) === Number(user.id)) {
+          await syncFromServer(false);
+        }
+        await loadAdminStats();
+      } catch (e) {
+        admErr.textContent = "Не вдалося нарахувати. Перевір API і права адміна.";
+        notify("error");
+      }
+    });
+
+    document.getElementById("admRefreshBtn").addEventListener("click", async () => {
+      haptic("light");
+      await loadAdminStats();
+      await syncFromServer(true);
+      toast("Статистику оновлено");
+    });
+
+    document.getElementById("admTaskCreateBtn").addEventListener("click", async () => {
+      const err = document.getElementById("admTaskError");
+      err.textContent = "";
+      const url = document.getElementById("admTaskLink").value.trim();
+      const type = document.getElementById("admTaskType").value;
+      const reward = Number(String(document.getElementById("admTaskReward").value).replace(",", "."));
+      if (!url) {
+        err.textContent = "Вкажи посилання на канал або пост.";
+        return;
+      }
+      if (!reward || reward <= 0) {
+        err.textContent = "Вкажи нагороду в гривнях.";
+        return;
+      }
+      try {
+        const data = await api("/api/admin/tasks", {
+          method: "POST",
+          body: { url, type, reward }
+        });
+        if (data.catalog) {
+          state.catalog = data.catalog;
+          renderTasks();
+        }
+        toast("Завдання створено");
+        notify("success");
+        document.getElementById("admTaskLink").value = "";
+        document.getElementById("admTaskReward").value = "";
+        await syncFromServer(true);
+      } catch (e) {
+        err.textContent = "Не вдалося створити. Перевір API і права адміна.";
+        notify("error");
+      }
+    });
+
+    document.getElementById("admTaskList").addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-del-task]");
+      if (!btn) return;
+      try {
+        const data = await api("/api/admin/tasks/delete", {
+          method: "POST",
+          body: { id: btn.getAttribute("data-del-task") }
+        });
+        if (data.catalog) {
+          state.catalog = data.catalog;
+          renderTasks();
+        }
+        toast("Завдання вимкнено");
+        await syncFromServer(true);
+      } catch (err) {
+        toast("Не вдалося видалити");
+      }
+    });
+
+    document.querySelectorAll(".nav-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll(".nav-btn").forEach((b) => b.classList.toggle("active", b === btn));
+        document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "panel-" + tab));
+        haptic("light");
+        if (tab === "admin") loadAdminStats();
+      });
+    });
+
+    document.getElementById("admUserId").value = user.id ? String(user.id) : "";
+
+    syncFromServer(true).then((data) => {
+      if (data && isAdmin) loadAdminStats();
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") syncFromServer(true);
+    });
+  </script>
+</body>
+</html>
